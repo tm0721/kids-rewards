@@ -1,952 +1,788 @@
-<style>
-    body {
-        font-family: 'Zen Maru Gothic', 'Noto Sans HK', sans-serif;
-        background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 50%, #fdf2f8 100%);
-        min-height: 100vh;
-    }
-    .card-pop {
-        transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .card-pop:active {
-        transform: scale(0.96);
-    }
-    ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.03);
-    }
-    ::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.15);
-        border-radius: 10px;
-    }
-</style>
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 寶貝成長獎勵計劃</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'sister-primary': '#FF719A',
+                        'sister-secondary': '#FF9EAA',
+                        'younger-primary': '#9B51E0',
+                        'younger-secondary': '#BB6BD9',
+                        'soft-bg': '#FFF7F8',
+                    },
+                    fontFamily: {
+                        sans: ['Fredoka', 'Noto Sans TC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #FAF5EF; font-family: 'Fredoka', 'Noto Sans TC', sans-serif; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .tab-active { border-bottom: 4px solid #FF719A; color: #FF719A; font-weight: 700; }
+        .btn-bounce:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 pb-20">
 
-
-<div class="max-w-md md:max-w-2xl mx-auto px-4 pt-6">
-    
-    <!-- Header Title & Sync Status -->
-    <header class="text-center mb-6">
-        <h1 class="text-2xl sm:text-3xl font-black bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 bg-clip-text text-transparent flex items-center justify-center gap-2">
-            <span>🌟</span> 好孩子星級獎勵計劃 <span>✨</span>
-        </h1>
-        <p class="text-xs text-slate-500 mt-1 font-bold">建立良好習慣 ‧ 努力累積星星換大獎</p>
-
-        <!-- Sync Pill & Setup Button -->
-        <div class="mt-3 flex items-center justify-center gap-2 flex-wrap text-xs font-bold">
-            <div id="cloud-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
-                <span id="sync-icon">💾</span>
-                <span id="sync-text">本機紀錄模式</span>
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-sm border-b border-orange-100 px-4 py-3">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-3xl">👑</span>
+                <div>
+                    <h1 class="font-extrabold text-xl md:text-2xl text-amber-800 leading-tight">寶貝成長獎勵計劃</h1>
+                    <p class="text-xs text-amber-600 font-medium">小一 & K1 專屬積分榜</p>
+                </div>
             </div>
-            <button onclick="openGithubModal()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-800 text-white hover:bg-slate-700 transition shadow-sm active:scale-95">
-                <span>🐙 GitHub JSON 同步設定</span>
-            </button>
-            <button onclick="manualSyncFromCloud()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-pink-500 text-white hover:bg-pink-600 transition shadow-sm font-bold active:scale-95">
-                <span>🔄 立即刷新同步</span>
+            <!-- Sync Status Button -->
+            <button onclick="switchTab('settings')" id="syncStatusBtn" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 transition shadow-sm">
+                <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
+                <span id="syncText" class="font-bold text-gray-600">本機模式</span>
             </button>
         </div>
     </header>
 
-    <!-- Kid Profile Switcher Tabs -->
-    <div class="grid grid-cols-2 gap-3 mb-6">
-        <button id="tab-elder" onclick="switchProfile('elder')" class="flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-pink-400 shadow-md">
-            <span class="text-3xl">👧🏻</span>
-            <div class="text-left">
-                <div id="name-elder" class="font-black text-slate-800 text-base sm:text-lg">大女兒</div>
-                <span class="text-[10px] bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full font-bold">升小一</span>
-            </div>
-        </button>
-        
-        <button id="tab-younger" onclick="switchProfile('younger')" class="flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70">
-            <span class="text-3xl">👧👶</span>
-            <div class="text-left">
-                <div id="name-younger" class="font-black text-slate-800 text-base sm:text-lg">細女兒</div>
-                <span class="text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-bold">升K1</span>
-            </div>
-        </button>
-    </div>
+    <main class="max-w-4xl mx-auto px-4 mt-4 space-y-6">
 
-    <!-- Hero Star Score Card -->
-    <div id="profile-banner" class="bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-300">
-        <div class="absolute -right-4 -bottom-4 text-9xl opacity-10 pointer-events-none">⭐</div>
-        <div class="flex items-center justify-between relative z-10">
-            <div class="flex items-center gap-3">
-                <span id="avatar-icon" class="text-4xl bg-white/20 p-2 rounded-2xl backdrop-blur-sm">👧🏻</span>
+        <!-- Daughter Scoreboard Cards -->
+        <div class="grid grid-cols-2 gap-3 md:gap-6">
+            <!-- Elder Daughter (Primary 1) -->
+            <div id="card-k1" onclick="selectKid('k1')" class="cursor-pointer relative overflow-hidden rounded-3xl p-4 md:p-5 bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-md transition-all transform hover:-translate-y-1 border-4 border-transparent">
+                <div class="flex justify-between items-start">
+                    <span class="text-3xl md:text-4xl">👧🏻</span>
+                    <span class="bg-white/30 text-xs px-2.5 py-1 rounded-full font-bold backdrop-blur-sm">升小一</span>
+                </div>
+                <h2 class="text-base md:text-lg font-bold mt-2">大女兒 (姐姐)</h2>
+                <div class="mt-2 flex items-baseline gap-1">
+                    <span class="text-3xl md:text-5xl font-black" id="points-k1">0</span>
+                    <span class="text-xs md:text-sm font-semibold opacity-90">分</span>
+                </div>
+                <div class="mt-3 bg-black/10 rounded-full h-2 w-full overflow-hidden">
+                    <div id="progress-k1" class="bg-amber-300 h-full rounded-full transition-all duration-500" style="width: 30%"></div>
+                </div>
+                <div class="text-[10px] mt-1 text-pink-100 text-right">目標：換領活動</div>
+            </div>
+
+            <!-- Younger Daughter (K1) -->
+            <div id="card-k2" onclick="selectKid('k2')" class="cursor-pointer relative overflow-hidden rounded-3xl p-4 md:p-5 bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-md transition-all transform hover:-translate-y-1 border-4 border-transparent">
+                <div class="flex justify-between items-start">
+                    <span class="text-3xl md:text-4xl">👶🏻</span>
+                    <span class="bg-white/30 text-xs px-2.5 py-1 rounded-full font-bold backdrop-blur-sm">升 K1</span>
+                </div>
+                <h2 class="text-base md:text-lg font-bold mt-2">小女兒 (妹妹)</h2>
+                <div class="mt-2 flex items-baseline gap-1">
+                    <span class="text-3xl md:text-5xl font-black" id="points-k2">0</span>
+                    <span class="text-xs md:text-sm font-semibold opacity-90">分</span>
+                </div>
+                <div class="mt-3 bg-black/10 rounded-full h-2 w-full overflow-hidden">
+                    <div id="progress-k2" class="bg-amber-300 h-full rounded-full transition-all duration-500" style="width: 20%"></div>
+                </div>
+                <div class="text-[10px] mt-1 text-purple-100 text-right">目標：換領活動</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-gray-200 bg-white rounded-2xl p-1 shadow-sm font-bold text-sm">
+            <button onclick="switchTab('tasks')" id="tab-tasks" class="flex-1 py-2.5 text-center rounded-xl transition text-pink-600 bg-pink-50">
+                <i class="fa-solid fa-list-check mr-1"></i> 日常任務
+            </button>
+            <button onclick="switchTab('rewards')" id="tab-rewards" class="flex-1 py-2.5 text-center rounded-xl transition text-gray-500 hover:text-pink-600">
+                <i class="fa-solid fa-gift mr-1"></i> 獎勵商店
+            </button>
+            <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-2.5 text-center rounded-xl transition text-gray-500 hover:text-pink-600">
+                <i class="fa-solid fa-clock-rotate-left mr-1"></i> 紀錄
+            </button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-2.5 text-center rounded-xl transition text-gray-500 hover:text-pink-600">
+                <i class="fa-solid fa-gear mr-1"></i> 同步
+            </button>
+        </div>
+
+        <!-- TAB 1: TASKS -->
+        <section id="sec-tasks" class="space-y-4">
+            <!-- Filter Bar -->
+            <div class="flex justify-between items-center gap-2 overflow-x-auto pb-1 text-xs">
+                <div class="flex gap-1.5">
+                    <button onclick="filterTasks('all')" class="filter-btn active bg-gray-800 text-white px-3 py-1.5 rounded-full font-semibold">全部</button>
+                    <button onclick="filterTasks('p1')" class="filter-btn bg-white text-gray-600 border border-gray-200 px-3 py-1.5 rounded-full font-semibold">適合小一 (姐姐)</button>
+                    <button onclick="filterTasks('k1')" class="filter-btn bg-white text-gray-600 border border-gray-200 px-3 py-1.5 rounded-full font-semibold">適合 K1 (妹妹)</button>
+                </div>
+                <button onclick="openAddTaskModal()" class="shrink-0 bg-amber-500 text-white font-bold px-3 py-1.5 rounded-full text-xs shadow hover:bg-amber-600">
+                    <i class="fa-solid fa-plus"></i> 新增任務
+                </button>
+            </div>
+
+            <!-- Task Grid List -->
+            <div id="taskList" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- JavaScript rendered -->
+            </div>
+        </section>
+
+        <!-- TAB 2: REWARDS -->
+        <section id="sec-rewards" class="space-y-4 hidden">
+            <div class="flex justify-between items-center">
+                <p class="text-xs text-gray-500 font-medium">使用分數兌換獎勵 (請選擇上方要扣分的寶貝)</p>
+                <button onclick="openAddRewardModal()" class="bg-rose-500 text-white font-bold px-3 py-1.5 rounded-full text-xs shadow hover:bg-rose-600">
+                    <i class="fa-solid fa-plus"></i> 新增獎勵
+                </button>
+            </div>
+
+            <div id="rewardList" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- JavaScript rendered -->
+            </div>
+        </section>
+
+        <!-- TAB 3: HISTORY -->
+        <section id="sec-history" class="space-y-3 hidden">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-gray-700 text-sm">最近加分與兌換紀錄</h3>
+                <button onclick="clearHistory()" class="text-xs text-gray-400 hover:text-red-500">清除歷史</button>
+            </div>
+            <div id="historyList" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3 max-h-[500px] overflow-y-auto">
+                <!-- JavaScript rendered -->
+            </div>
+        </section>
+
+        <!-- TAB 4: SETTINGS & GIST SYNC -->
+        <section id="sec-settings" class="space-y-4 hidden">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+                        <i class="fa-brands fa-github"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">GitHub Gist 雲端同步設定</h3>
+                        <p class="text-xs text-gray-500">讓爸爸同太太的手機實時同步分數！</p>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+                    <p class="font-bold"><i class="fa-solid fa-lightbulb"></i> 簡易步驟：</p>
+                    <ol class="list-decimal pl-4 space-y-1 text-amber-900">
+                        <li>前往 GitHub -> Settings -> Developer Settings -> Personal Access Tokens (Fine-grained 或 Classic)。</li>
+                        <li>勾選 <b>gist</b> 權限並生成 Token。</li>
+                        <li>把 Token 貼在下方，按下「自動建立/連結 Gist」即可！</li>
+                    </ol>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">GitHub Personal Access Token (PAT)</label>
+                        <input type="password" id="gistTokenInput" placeholder="ghp_xxxxxxxxxxxx" class="w-full text-sm p-3 border rounded-xl focus:ring-2 focus:ring-pink-300 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Gist ID (留空可自動建立)</label>
+                        <input type="text" id="gistIdInput" placeholder="例如：a1b2c3d4e5f6..." class="w-full text-sm p-3 border rounded-xl focus:ring-2 focus:ring-pink-300 outline-none">
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="saveAndSyncGist()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow hover:bg-blue-700 transition text-sm">
+                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 儲存並同步雲端
+                    </button>
+                    <button onclick="pullGistData()" class="bg-gray-100 text-gray-700 font-bold px-4 py-3 rounded-xl hover:bg-gray-200 transition text-sm">
+                        <i class="fa-solid fa-rotate"></i> 手動拉取
+                    </button>
+                </div>
+            </div>
+
+            <!-- Manage Data -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-3">
+                <h3 class="font-bold text-gray-800 text-sm">數據管理</h3>
+                <div class="flex gap-2">
+                    <button onclick="exportData()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-3 rounded-lg">備份資料 (JSON)</button>
+                    <button onclick="resetData()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-lg">重置預設資料</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Add Task -->
+    <div id="addTaskModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <h3 class="font-bold text-lg text-gray-800">✨ 新增自訂任務</h3>
+            <div class="space-y-3 text-sm">
                 <div>
-                    <div class="flex items-center gap-2">
-                        <h2 id="current-name" class="text-xl font-black">大女兒</h2>
-                        <button onclick="openEditNameModal()" class="text-xs bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-lg text-white font-bold transition">✏️ 改名</button>
-                    </div>
-                    <p id="current-tag" class="text-xs text-white/90 font-bold mt-0.5">努力儲星中！</p>
+                    <label class="block font-bold text-gray-600 mb-1">任務名稱</label>
+                    <input type="text" id="newTaskName" placeholder="例如：自己洗碗、讀完一本書" class="w-full p-2.5 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">適用對象</label>
+                    <select id="newTaskTarget" class="w-full p-2.5 border rounded-xl">
+                        <option value="all">兩位寶貝通用</option>
+                        <option value="p1">姐姐專屬 (小一)</option>
+                        <option value="k1">妹妹專屬 (K1)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">類別圖示 (Emoji)</label>
+                    <input type="text" id="newTaskIcon" placeholder="例如：🧹, 📚, 🛌, 🦷" value="⭐" class="w-full p-2.5 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">獎勵分數</label>
+                    <input type="number" id="newTaskPoints" value="1" min="1" class="w-full p-2.5 border rounded-xl">
                 </div>
             </div>
-            <div class="text-right">
-                <div class="text-xs text-white/80 font-bold uppercase tracking-wider">目前累積金星</div>
-                <div class="text-4xl sm:text-5xl font-black drop-shadow-md flex items-center justify-end gap-1">
-                    <span id="point-count">0</span>
-                    <span class="text-amber-300 text-3xl sm:text-4xl">⭐</span>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('addTaskModal')" class="flex-1 py-2.5 text-gray-500 font-bold text-sm">取消</button>
+                <button onclick="saveNewTask()" class="flex-1 py-2.5 bg-amber-500 text-white font-bold rounded-xl shadow text-sm hover:bg-amber-600">新增任務</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Reward -->
+    <div id="addRewardModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <h3 class="font-bold text-lg text-gray-800">🎁 新增自訂獎勵</h3>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">獎勵名稱</label>
+                    <input type="text" id="newRewardName" placeholder="例如：去公園野餐、買繪本" class="w-full p-2.5 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">圖示 (Emoji)</label>
+                    <input type="text" id="newRewardIcon" placeholder="例如：🎡, 🍣, 🎮, 🍦" value="🎁" class="w-full p-2.5 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">所需分數</label>
+                    <input type="number" id="newRewardCost" value="10" min="1" class="w-full p-2.5 border rounded-xl">
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Navigation Section Switcher -->
-    <div class="flex border-b-2 border-slate-200/80 mb-6 text-sm font-black">
-        <button id="sec-tab-tasks" onclick="switchSection('tasks')" class="pb-3 border-b-4 border-pink-500 text-pink-600 flex items-center gap-1.5 px-3 transition">
-            <span>📋</span>
-            <span>好行為任務</span>
-        </button>
-        <button id="sec-tab-rewards" onclick="switchSection('rewards')" class="pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition">
-            <span>🎁</span>
-            <span>獎勵換領</span>
-        </button>
-        <button id="sec-tab-history" onclick="switchSection('history')" class="pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition">
-            <span>📜</span>
-            <span>星星紀錄</span>
-        </button>
-    </div>
-
-    <!-- TASKS SECTION -->
-    <div id="section-tasks" class="space-y-4">
-        <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1 text-xs font-bold">
-            <div class="flex items-center gap-1 shrink-0">
-                <button onclick="filterTasks('all')" data-cat="all" class="task-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm">全部</button>
-                <button onclick="filterTasks('routine')" data-cat="routine" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">☀️ 常規/自理</button>
-                <button onclick="filterTasks('housework')" data-cat="housework" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🧹 家務小幫手</button>
-                <button onclick="filterTasks('learning')" data-cat="learning" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">✏️ 學習閱讀</button>
-                <button onclick="filterTasks('manners')" data-cat="manners" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">💖 禮貌情緒</button>
-            </div>
-            <button onclick="openAddTaskModal()" class="shrink-0 bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 shadow-sm transition active:scale-95">
-                <span>➕</span>
-                <span>新增任務</span>
-            </button>
-        </div>
-
-        <div id="tasks-grid" class="grid grid-cols-1 gap-3"></div>
-    </div>
-
-    <!-- REWARDS SECTION -->
-    <div id="section-rewards" class="space-y-4 hidden">
-        <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1 text-xs font-bold">
-            <div class="flex items-center gap-1 shrink-0">
-                <button onclick="filterRewards('all')" data-rcat="all" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm">全部</button>
-                <button onclick="filterRewards('treat')" data-rcat="treat" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🍣 美味美食</button>
-                <button onclick="filterRewards('outing')" data-rcat="outing" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🛝 戶外放電</button>
-                <button onclick="filterRewards('activity')" data-rcat="activity" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🎨 家庭時光</button>
-            </div>
-            <button onclick="openAddRewardModal()" class="shrink-0 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 shadow-sm transition active:scale-95">
-                <span>➕</span>
-                <span>新增獎勵</span>
-            </button>
-        </div>
-
-        <div id="rewards-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-    </div>
-
-    <!-- HISTORY SECTION -->
-    <div id="section-history" class="space-y-4 hidden">
-        <div class="flex items-center justify-between">
-            <h3 class="font-black text-sm text-slate-700 flex items-center gap-1">
-                <span>📜</span> 最近獎勵與兌換紀錄
-            </h3>
-            <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-rose-500 transition font-bold">清除紀錄</button>
-        </div>
-        <div id="history-list" class="space-y-2"></div>
-    </div>
-
-</div>
-
-<!-- MODALS -->
-<div id="modal-backdrop" onclick="closeModal()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden transition-opacity"></div>
-
-<!-- GitHub Sync Modal -->
-<div id="modal-github-sync" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
-    <h3 class="text-lg font-black text-slate-800 mb-2 flex items-center gap-2">
-        <span>🐙</span> GitHub JSON 同步設定
-    </h3>
-    <p class="text-xs text-slate-500 mb-4 font-bold leading-relaxed">
-        透過 GitHub Gist 儲存 JSON，你和太太的手機可以實時共享資料，不會丟失！
-    </p>
-
-    <div class="space-y-3 text-xs font-bold">
-        <div>
-            <label class="block text-slate-600 mb-1">1. GitHub Personal Access Token (PAT)</label>
-            <input type="password" id="github-token-input" placeholder="ghp_xxxxxxxxxxxx" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-800">
-            <p class="text-[10px] text-slate-400 mt-1">請在 GitHub -> Settings -> Developer settings -> Personal Access Tokens (Classic) 申請，需勾選 <b>gist</b> 權限。</p>
-        </div>
-
-        <div>
-            <label class="block text-slate-600 mb-1">2. GitHub Gist ID</label>
-            <input type="text" id="github-gist-id-input" placeholder="例如：a1b2c3d4e5f6..." class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-800">
-        </div>
-
-        <button onclick="autoCreateGist()" class="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl transition text-xs font-black">
-            ✨ 填了 Token 後，按此自動建立 Gist ID
-        </button>
-    </div>
-
-    <div class="flex gap-2 mt-6 font-bold text-xs">
-        <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600">取消</button>
-        <button onclick="saveGithubSettings()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-white shadow-md">儲存並同步</button>
-    </div>
-</div>
-
-<!-- Add Task Modal -->
-<div id="modal-add-task" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
-    <h3 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-        <span>✨</span> 新增自訂任務
-    </h3>
-    <div class="space-y-3 text-xs font-bold">
-        <div>
-            <label class="block text-slate-600 mb-1">任務名稱</label>
-            <input type="text" id="input-task-title" placeholder="例如：主動幫忙倒垃圾" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400">
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-            <div>
-                <label class="block text-slate-600 mb-1">Emoji 圖案</label>
-                <input type="text" id="input-task-emoji" placeholder="例如：🗑️" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400">
-            </div>
-            <div>
-                <label class="block text-slate-600 mb-1">可得星星 ⭐</label>
-                <input type="number" id="input-task-points" value="1" min="1" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400">
-            </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-            <div>
-                <label class="block text-slate-600 mb-1">任務類別</label>
-                <select id="input-task-cat" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400 bg-white">
-                    <option value="routine">☀️ 常規/自理</option>
-                    <option value="housework">🧹 家務小幫手</option>
-                    <option value="learning">✏️ 學習閱讀</option>
-                    <option value="manners">💖 禮貌情緒</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-slate-600 mb-1">適用對象</label>
-                <select id="input-task-target" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400 bg-white">
-                    <option value="both">👧🏻👧👶 兩位囡囡皆適用</option>
-                    <option value="elder">👧🏻 大女兒專屬 (升小一)</option>
-                    <option value="younger">👧👶 細女兒專屬 (升K1)</option>
-                </select>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('addRewardModal')" class="flex-1 py-2.5 text-gray-500 font-bold text-sm">取消</button>
+                <button onclick="saveNewReward()" class="flex-1 py-2.5 bg-rose-500 text-white font-bold rounded-xl shadow text-sm hover:bg-rose-600">新增獎勵</button>
             </div>
         </div>
     </div>
-    <div class="flex gap-2 mt-6 font-bold text-xs">
-        <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">取消</button>
-        <button onclick="saveCustomTask()" class="flex-1 py-2.5 rounded-xl bg-pink-500 text-white hover:bg-pink-600 transition shadow-md">儲存任務</button>
+
+    <!-- Toast Notice -->
+    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900/90 text-white px-5 py-3 rounded-full text-sm font-bold shadow-xl z-50 transition-all opacity-0 pointer-events-none flex items-center gap-2">
+        <span id="toastIcon">🎉</span>
+        <span id="toastMsg">成功完成！</span>
     </div>
-</div>
 
-<!-- Add Reward Modal -->
-<div id="modal-add-reward" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
-    <h3 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-        <span>🎁</span> 新增自訂獎勵
-    </h3>
-    <div class="space-y-3 text-xs font-bold">
-        <div>
-            <label class="block text-slate-600 mb-1">獎勵名稱</label>
-            <input type="text" id="input-reward-title" placeholder="例如：買一套心儀繪本" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400">
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-            <div>
-                <label class="block text-slate-600 mb-1">Emoji 圖案</label>
-                <input type="text" id="input-reward-emoji" placeholder="例如：📚" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400">
-            </div>
-            <div>
-                <label class="block text-slate-600 mb-1">需要星星 ⭐</label>
-                <input type="number" id="input-reward-points" value="10" min="1" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400">
-            </div>
-        </div>
-        <div>
-            <label class="block text-slate-600 mb-1">獎勵類別</label>
-            <select id="input-reward-cat" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400 bg-white">
-                <option value="treat">🍣 美味美食</option>
-                <option value="outing">🛝 戶外放電</option>
-                <option value="activity">🎨 家庭時光</option>
-            </select>
-        </div>
-    </div>
-    <div class="flex gap-2 mt-6 font-bold text-xs">
-        <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">取消</button>
-        <button onclick="saveCustomReward()" class="flex-1 py-2.5 rounded-xl bg-purple-500 text-white hover:bg-purple-600 transition shadow-md">儲存獎勵</button>
-    </div>
-</div>
-
-<!-- Edit Name Modal -->
-<div id="modal-edit-name" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
-    <h3 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">✏️ 修改名稱</h3>
-    <input type="text" id="input-kid-name" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:outline-none focus:border-pink-400 mb-4">
-    <div class="flex gap-2 font-bold text-xs">
-        <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600">取消</button>
-        <button onclick="saveNameChange()" class="flex-1 py-2.5 rounded-xl bg-pink-500 text-white shadow-md">確定更新</button>
-    </div>
-</div>
-
-<!-- Custom Alert Modal -->
-<div id="modal-alert" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-3xl p-6 shadow-2xl z-50 hidden text-center border border-slate-100">
-    <div id="alert-icon" class="text-5xl mb-2">🎉</div>
-    <h3 id="alert-title" class="text-lg font-black text-slate-800 mb-1">兌換成功！</h3>
-    <p id="alert-msg" class="text-xs font-bold text-slate-500 mb-5 leading-relaxed"></p>
-    <button onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs shadow-md">知道啦！</button>
-</div>
-
-<script>
-    const DEFAULT_TASKS = [
-        { id: 't1', title: '晚上 9:30 前準時上床洗澡睡覺', emoji: '🌙', points: 1, cat: 'routine', target: 'both' },
-        { id: 't2', title: '早上 7:30 前自動自覺起床', emoji: '☀️', points: 1, cat: 'routine', target: 'both' },
-        { id: 't3', title: '玩完玩具後主動歸位整理乾淨', emoji: '🧸', points: 1, cat: 'routine', target: 'both' },
-        { id: 't4', title: '獨立收拾好自己的小書包與上學用品', emoji: '🎒', points: 1, cat: 'routine', target: 'elder' },
-        { id: 't5', title: '出門前自己穿好鞋子與外套', emoji: '👟', points: 1, cat: 'routine', target: 'younger' },
-        { id: 't6', title: '吃飯前幫忙擺放碗筷與紙巾', emoji: '🥣', points: 1, cat: 'housework', target: 'both' },
-        { id: 't7', title: '吃完飯後把自己的碗盤放到洗碗槽', emoji: '🍽️', points: 1, cat: 'housework', target: 'both' },
-        { id: 't8', title: '幫忙抹桌子或整理餐桌', emoji: '🧹', points: 1, cat: 'housework', target: 'both' },
-        { id: 't9', title: '幫忙摺自己的小衣服或襪子', emoji: '👕', points: 1, cat: 'housework', target: 'both' },
-        { id: 't10', title: '專心獨立完成學校功課 / 工作紙', emoji: '✏️', points: 2, cat: 'learning', target: 'elder' },
-        { id: 't11', title: '認真閱讀繪本或圖書 20 分鐘', emoji: '📖', points: 1, cat: 'learning', target: 'both' },
-        { id: 't12', title: '主動練習寫字或畫畫創作', emoji: '🎨', points: 1, cat: 'learning', target: 'both' },
-        { id: 't13', title: '吃飯前與回家後自覺用肥皂洗手', emoji: '🧼', points: 1, cat: 'manners', target: 'both' },
-        { id: 't14', title: '早晚自動自覺刷牙洗臉', emoji: '🪥', points: 1, cat: 'manners', target: 'both' },
-        { id: 't15', title: '對長輩與家人有禮貌、主動打招呼', emoji: '💖', points: 1, cat: 'manners', target: 'both' },
-        { id: 't16', title: '整天情緒穩定、遇到問題好好表達', emoji: '😊', points: 2, cat: 'manners', target: 'both' }
-    ];
-
-    const DEFAULT_REWARDS = [
-        { id: 'r1', title: '去食迴轉壽司 🍣', emoji: '🍣', points: 15, cat: 'treat' },
-        { id: 'r2', title: '享用美味雪糕 / 甜品一次 🍦', emoji: '🍦', points: 8, cat: 'treat' },
-        { id: 'r3', title: '自選週末晚餐菜式 🍕', emoji: '🍕', points: 10, cat: 'treat' },
-        { id: 'r4', title: '去室內遊樂場 / Playhouse 玩 🛝', emoji: '🛝', points: 20, cat: 'outing' },
-        { id: 'r5', title: '去公園踩單車 / 滑板車 🚲', emoji: '🚲', points: 10, cat: 'outing' },
-        { id: 'r6', title: '去海邊沙灘堆沙放電 🏖️', emoji: '🏖️', points: 15, cat: 'outing' },
-        { id: 'r7', title: '家庭電影之夜（選想睇嘅電影+爆谷）🍿', emoji: '🍿', points: 12, cat: 'activity' },
-        { id: 'r8', title: '爸媽專屬一對一陪玩 30 分鐘 🎲', emoji: '🎲', points: 10, cat: 'activity' },
-        { id: 'r9', title: 'DIY 親子烘焙 / 手工製作 🎨', emoji: '🎨', points: 12, cat: 'activity' },
-        { id: 'r10', title: '週末允許特權延遲 30 分鐘睡覺 ⏰', emoji: '⏰', points: 8, cat: 'activity' }
-    ];
-
-    let state = {
-        activeProfile: 'elder',
-        updatedAt: Date.now(),
-        profiles: {
-            elder: { name: '大女兒', tag: '努力儲星中！', subTag: '升小一', points: 0, avatar: '👧🏻', history: [] },
-            younger: { name: '細女兒', tag: '快樂成長中！', subTag: '升K1', points: 0, avatar: '👧👶', history: [] }
-        },
-        tasks: [...DEFAULT_TASKS],
-        rewards: [...DEFAULT_REWARDS],
-        github: {
-            token: '',
-            gistId: ''
-        },
-        taskFilter: 'all',
-        rewardFilter: 'all'
-    };
-
-    function loadFromLocalStorage() {
-        try {
-            const saved = localStorage.getItem('kids_rewards_gh_state');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed && parsed.profiles) {
-                    state = { ...state, ...parsed };
-                }
-            }
-        } catch(e) {}
-
-        // Support direct URL query parameter settings (?token=xxx&gist=yyy)
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('token')) state.github.token = params.get('token');
-        if (params.get('gist')) state.github.gistId = params.get('gist');
-    }
-
-    function saveToLocalStorage() {
-        try {
-            localStorage.setItem('kids_rewards_gh_state', JSON.stringify(state));
-        } catch(e) {}
-    }
-
-    // --- GITHUB GIST SYNC CORE ---
-    async function syncToGitHub() {
-        saveToLocalStorage();
-
-        if (!state.github.token || !state.github.gistId) {
-            updateSyncBadge('local', '本機紀錄模式');
-            return;
-        }
-
-        updateSyncBadge('syncing', '上載至 GitHub...');
-
-        try {
-            const cleanState = { ...state };
-            // Keep token inside JSON body light
-            cleanState.updatedAt = Date.now();
-
-            const response = await fetch(`https://api.github.com/gists/${state.github.gistId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `token ${state.github.token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    description: '好孩子星級獎勵計劃資料庫',
-                    files: {
-                        'kids_star_rewards.json': {
-                            content: JSON.stringify(cleanState, null, 2)
-                        }
-                    }
-                })
-            });
-
-            if (response.ok) {
-                updateSyncBadge('success', '已同步至 GitHub');
-            } else {
-                updateSyncBadge('error', 'GitHub 同步失敗 (檢查Token/ID)');
-            }
-        } catch(e) {
-            updateSyncBadge('error', '網路連接失敗');
-        }
-    }
-
-    async function fetchFromGitHub() {
-        if (!state.github.token || !state.github.gistId) return;
-
-        updateSyncBadge('syncing', '載入 GitHub 資料...');
-
-        try {
-            const response = await fetch(`https://api.github.com/gists/${state.github.gistId}`, {
-                headers: {
-                    'Authorization': `token ${state.github.token}`
-                }
-            });
-
-            if (response.ok) {
-                const gistData = await response.json();
-                const jsonContent = gistData.files['kids_star_rewards.json']?.content;
-
-                if (jsonContent) {
-                    const cloudState = JSON.parse(jsonContent);
-                    if (!state.updatedAt || cloudState.updatedAt >= state.updatedAt) {
-                        state = { ...state, ...cloudState };
-                        saveToLocalStorage();
-                        renderAll();
-                        updateSyncBadge('success', '已同步 GitHub 最新數據');
-                    }
-                }
-            } else {
-                updateSyncBadge('error', '無法取得 GitHub 資料');
-            }
-        } catch(e) {
-            updateSyncBadge('error', 'GitHub 網路超時');
-        }
-    }
-
-    async function autoCreateGist() {
-        const token = document.getElementById('github-token-input').value.trim();
-        if (!token) {
-            alert('請先輸入 GitHub Token！');
-            return;
-        }
-
-        try {
-            const response = await fetch('https://api.github.com/gists', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    description: '好孩子星級獎勵計劃資料庫',
-                    public: false,
-                    files: {
-                        'kids_star_rewards.json': {
-                            content: JSON.stringify(state, null, 2)
-                        }
-                    }
-                })
-            });
-
-            if (response.ok) {
-                const resJson = await response.json();
-                document.getElementById('github-gist-id-input').value = resJson.id;
-                alert('🎉 成功建立秘密 Gist！ID 已自動填入。');
-            } else {
-                alert('❌ 自動建立失敗，請確認 Token 權限有勾選 [gist]！');
-            }
-        } catch(e) {
-            alert('網絡連線出錯');
-        }
-    }
-
-    function updateSyncBadge(type, msg) {
-        const badge = document.getElementById('cloud-status-badge');
-        const icon = document.getElementById('sync-icon');
-        const text = document.getElementById('sync-text');
-
-        text.innerText = msg;
-
-        if (type === 'success') {
-            icon.innerText = '🟢';
-            badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200";
-        } else if (type === 'syncing') {
-            icon.innerText = '⏳';
-            badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200 animate-pulse";
-        } else if (type === 'error') {
-            icon.innerText = '🔴';
-            badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-200";
-        } else {
-            icon.innerText = '💾';
-            badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200";
-        }
-    }
-
-    function manualSyncFromCloud() {
-        if (!state.github.token || !state.github.gistId) {
-            openGithubModal();
-        } else {
-            fetchFromGitHub();
-        }
-    }
-
-    function switchProfile(profileKey) {
-        state.activeProfile = profileKey;
-        
-        const tabElder = document.getElementById('tab-elder');
-        const tabYounger = document.getElementById('tab-younger');
-
-        if (profileKey === 'elder') {
-            tabElder.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-pink-400 shadow-md";
-            tabYounger.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70";
-        } else {
-            tabElder.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70";
-            tabYounger.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-purple-400 shadow-md";
-        }
-
-        renderAll();
-        syncToGitHub();
-    }
-
-    function renderBanner() {
-        const p = state.profiles[state.activeProfile];
-        document.getElementById('current-name').innerText = p.name;
-        document.getElementById('current-tag').innerText = p.tag;
-        document.getElementById('point-count').innerText = p.points;
-        document.getElementById('avatar-icon').innerText = p.avatar;
-
-        document.getElementById('name-elder').innerText = state.profiles.elder.name;
-        document.getElementById('name-younger').innerText = state.profiles.younger.name;
-
-        const banner = document.getElementById('profile-banner');
-        if (state.activeProfile === 'elder') {
-            banner.className = "bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-300";
-        } else {
-            banner.className = "bg-gradient-to-r from-purple-500 via-indigo-400 to-pink-400 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-300";
-        }
-    }
-
-    function renderTasks() {
-        const container = document.getElementById('tasks-grid');
-        container.innerHTML = '';
-
-        const currentProf = state.activeProfile;
-        const filtered = state.tasks.filter(t => {
-            const matchCat = state.taskFilter === 'all' || t.cat === state.taskFilter;
-            const matchTarget = t.target === 'both' || t.target === currentProf;
-            return matchCat && matchTarget;
-        });
-
-        if (filtered.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
-                    <div class="text-4xl mb-2">🎈</div>
-                    <p class="font-bold">暫時沒有此類別任務，點擊上方按鈕新增吧！</p>
-                </div>
-            `;
-            return;
-        }
-
-        filtered.forEach(task => {
-            const card = document.createElement('div');
-            card.className = "bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-3 card-pop";
-            card.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-2xl border border-amber-100 shrink-0">
-                        ${task.emoji || '⭐'}
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 text-sm sm:text-base leading-snug">${task.title}</h4>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-xs font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
-                                +${task.points} ⭐
-                            </span>
-                            ${task.target !== 'both' ? `<span class="text-[10px] text-pink-500 bg-pink-50 border border-pink-200 px-1.5 py-0.5 rounded font-bold">${task.target === 'elder' ? '升小一專屬' : '升K1專屬'}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-                <button onclick="addPoints('${task.id}')" class="shrink-0 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1">
-                    <span>完成</span>
-                    <span>✨</span>
-                </button>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    function renderRewards() {
-        const container = document.getElementById('rewards-grid');
-        container.innerHTML = '';
-
-        const currentPoints = state.profiles[state.activeProfile].points;
-        const filtered = state.rewards.filter(r => state.rewardFilter === 'all' || r.cat === state.rewardFilter);
-
-        if (filtered.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-full text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
-                    <div class="text-4xl mb-2">🎁</div>
-                    <p class="font-bold">暫時沒有此類別獎勵</p>
-                </div>
-            `;
-            return;
-        }
-
-        filtered.forEach(reward => {
-            const canAfford = currentPoints >= reward.points;
-            const card = document.createElement('div');
-            card.className = `bg-white rounded-2xl p-4 border transition-all flex items-center justify-between gap-3 ${canAfford ? 'border-purple-200 shadow-sm card-pop' : 'border-slate-100 opacity-60'}`;
+    <script>
+        // Default Tasks Tailored for Primary 1 & K1
+        const DEFAULT_TASKS = [
+            // General Chores & Routine
+            { id: 't1', name: '晚上 9:30 前準時入房睡覺', points: 1, icon: '🌙', target: 'all', cat: '規律作息' },
+            { id: 't2', name: '早上準時起床唔耍賴', points: 1, icon: '⏰', target: 'all', cat: '規律作息' },
+            { id: 't3', name: '玩完玩具自己收好入箱', points: 1, icon: '🧸', target: 'all', cat: '家務收拾' },
+            { id: 't4', name: '主動幫忙鋪餐桌/擦桌子', points: 1, icon: '🍽️', target: 'all', cat: '家務收拾' },
+            { id: 't5', name: '早晚主動刷牙洗臉', points: 1, icon: '🦷', target: 'all', cat: '個人衛生' },
             
-            card.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 ${canAfford ? 'bg-purple-50 border-purple-100' : 'bg-slate-100 border-slate-200'} rounded-2xl flex items-center justify-center text-2xl border shrink-0">
-                        ${reward.emoji || '🎁'}
+            // Primary 1 Specifics
+            { id: 't6', name: '自己按時間表整理書包', points: 2, icon: '🎒', target: 'p1', cat: '小一自理' },
+            { id: 't7', name: '放學主動拿出家課冊做功課', points: 2, icon: '✏️', target: 'p1', cat: '學習專注' },
+            { id: 't8', name: '自主閱讀課外書 15 分鐘', points: 1, icon: '📚', target: 'p1', cat: '學習專注' },
+            { id: 't9', name: '自己穿好校服與鞋襪', points: 1, icon: '👔', target: 'p1', cat: '小一自理' },
+
+            // K1 Specifics
+            { id: 't10', name: '自己食飯唔洗大人餵', points: 2, icon: '🥣', target: 'k1', cat: 'K1自理' },
+            { id: 't11', name: '主動說「請、謝謝、早晨」', points: 1, icon: '🗣️', target: 'k1', cat: '禮貌習慣' },
+            { id: 't12', name: '自己脫鞋子並擺放整齊', points: 1, icon: '👟', target: 'k1', cat: 'K1自理' },
+            { id: 't13', name: '聽到媽媽講話會回答「好」', points: 1, icon: '👂', target: 'k1', cat: '禮貌習慣' }
+        ];
+
+        // Healthy & Meaningful Reward Suggestions
+        const DEFAULT_REWARDS = [
+            { id: 'r1', name: '吃美味迴轉壽司 🍣', cost: 15, icon: '🍣', desc: '全家一齊去食壽司大餐！' },
+            { id: 'r2', name: '去室內/戶外遊樂場玩 🎪', cost: 20, icon: '🎡', desc: '玩足半日 放電好去處' },
+            { id: 'r3', name: '挑選一部週六家庭電影 🍿', cost: 8, icon: '🎬', desc: '一起準備爆谷看電影' },
+            { id: 'r4', name: '和爸爸/媽媽單獨約會 1 小時 ☕', cost: 12, icon: '👩‍👧', desc: '享受專屬的獨佔時光' },
+            { id: 'r5', name: '指定今晚晚餐的想食菜式 🍝', cost: 6, icon: '🍱', desc: '今晚由你當小廚神點餐' },
+            { id: 'r6', name: '買一本自己喜歡的繪本/圖書 📖', cost: 10, icon: '📖', desc: '培育閱讀興趣' },
+            { id: 'r7', name: '在家親子烘焙/DIY做餅乾 🍪', cost: 10, icon: '🧁', desc: '動手做美味小點心' },
+            { id: 'r8', name: '睡前聽額外 2 個故事 🌙', cost: 5, icon: '📖', desc: '延長溫馨故事時間' },
+            { id: 'r9', name: '去公園野餐與騎單車/滑板車 🚲', cost: 12, icon: '🌳', desc: '戶外健康運動' }
+        ];
+
+        // Main App State
+        let state = {
+            selectedKid: 'k1', // 'k1' (Elder/P1) or 'k2' (Younger/K1)
+            kids: {
+                k1: { name: '大女兒 (姐姐)', points: 0 },
+                k2: { name: '小女兒 (妹妹)', points: 0 }
+            },
+            tasks: DEFAULT_TASKS,
+            rewards: DEFAULT_REWARDS,
+            history: [],
+            gistToken: '',
+            gistId: ''
+        };
+
+        let currentFilter = 'all';
+
+        // Initialize App
+        window.onload = function() {
+            loadLocalData();
+            renderAll();
+            checkGistAutoSync();
+        };
+
+        function renderAll() {
+            renderKidPoints();
+            renderTasks();
+            renderRewards();
+            renderHistory();
+            updateSyncBadge();
+        }
+
+        function loadLocalData() {
+            const saved = localStorage.getItem('kids_reward_app_data');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.kids = parsed.kids || state.kids;
+                    state.tasks = parsed.tasks || DEFAULT_TASKS;
+                    state.rewards = parsed.rewards || DEFAULT_REWARDS;
+                    state.history = parsed.history || [];
+                    state.gistToken = parsed.gistToken || '';
+                    state.gistId = parsed.gistId || '';
+                    document.getElementById('gistTokenInput').value = state.gistToken;
+                    document.getElementById('gistIdInput').value = state.gistId;
+                } catch(e) {
+                    console.error("Failed to parse local data", e);
+                }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('kids_reward_app_data', JSON.stringify(state));
+            renderAll();
+            // Trigger background Gist sync if configured
+            if (state.gistToken && state.gistId) {
+                pushGistData(true);
+            }
+        }
+
+        function selectKid(kidId) {
+            state.selectedKid = kidId;
+            document.getElementById('card-k1').classList.remove('border-amber-300', 'scale-[1.02]');
+            document.getElementById('card-k2').classList.remove('border-amber-300', 'scale-[1.02]');
+            
+            document.getElementById(`card-${kidId}`).classList.add('border-amber-300', 'scale-[1.02]');
+            renderRewards();
+        }
+
+        function renderKidPoints() {
+            document.getElementById('points-k1').innerText = state.kids.k1.points;
+            document.getElementById('points-k2').innerText = state.kids.k2.points;
+
+            // Simple visual progress
+            document.getElementById('progress-k1').style.width = Math.min((state.kids.k1.points / 30) * 100, 100) + '%';
+            document.getElementById('progress-k2').style.width = Math.min((state.kids.k2.points / 30) * 100, 100) + '%';
+            
+            selectKid(state.selectedKid);
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('taskList');
+            container.innerHTML = '';
+
+            const filtered = state.tasks.filter(t => {
+                if (currentFilter === 'all') return true;
+                return t.target === 'all' || t.target === currentFilter;
+            });
+
+            filtered.forEach(task => {
+                const targetTag = task.target === 'p1' ? '<span class="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-bold">適合小一</span>' :
+                                  task.target === 'k1' ? '<span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">適合 K1</span>' :
+                                  '<span class="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold">通用</span>';
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-3 hover:shadow-md transition";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl p-2 bg-amber-50 rounded-2xl">${task.icon}</span>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                ${targetTag}
+                                <span class="text-[10px] text-gray-400 font-medium">${task.cat || '任務'}</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 text-sm leading-tight">${task.name}</h4>
+                            <span class="text-xs font-extrabold text-amber-500 mt-0.5 block">+${task.points} 分</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="awardTask('${task.id}', 'k1')" class="btn-bounce bg-pink-500 text-white font-bold text-xs px-2.5 py-2 rounded-xl shadow hover:bg-pink-600">
+                            +姐姐
+                        </button>
+                        <button onclick="awardTask('${task.id}', 'k2')" class="btn-bounce bg-purple-500 text-white font-bold text-xs px-2.5 py-2 rounded-xl shadow hover:bg-purple-600">
+                            +妹妹
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterTasks(type) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-gray-800', 'text-white');
+                btn.classList.add('bg-white', 'text-gray-600');
+            });
+            event.target.classList.remove('bg-white', 'text-gray-600');
+            event.target.classList.add('bg-gray-800', 'text-white');
+            renderTasks();
+        }
+
+        function awardTask(taskId, kidId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            state.kids[kidId].points += task.points;
+            
+            // Log History
+            state.history.unshift({
+                id: Date.now(),
+                kidName: state.kids[kidId].name,
+                type: 'award',
+                title: task.name,
+                points: `+${task.points}`,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'numeric', day: 'numeric' })
+            });
+
+            // Effect & Sound
+            triggerConfetti();
+            showToast(`🎉 ${state.kids[kidId].name} 完成「${task.name}」! +${task.points}分`);
+            
+            saveData();
+        }
+
+        function renderRewards() {
+            const container = document.getElementById('rewardList');
+            container.innerHTML = '';
+
+            const currentKid = state.kids[state.selectedKid];
+
+            state.rewards.forEach(reward => {
+                const canAfford = currentKid.points >= reward.cost;
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-3 hover:shadow-md transition";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl p-2 bg-rose-50 rounded-2xl">${reward.icon}</span>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-sm">${reward.name}</h4>
+                            <p class="text-xs text-gray-400 font-medium">${reward.desc || ''}</p>
+                            <span class="text-xs font-black text-rose-500 mt-1 block">需要 ${reward.cost} 分</span>
+                        </div>
                     </div>
                     <div>
-                        <h4 class="font-bold text-slate-800 text-sm sm:text-base leading-snug">${reward.title}</h4>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-xs font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200/60">
-                                需要 ${reward.points} ⭐
-                            </span>
+                        <button onclick="redeemReward('${reward.id}')" ${!canAfford ? 'disabled' : ''} 
+                            class="btn-bounce ${canAfford ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-gray-100 text-gray-400 cursor-not-allowed'} font-bold text-xs px-3 py-2 rounded-xl shadow transition">
+                            ${canAfford ? '立即兌換' : '分數不足'}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function redeemReward(rewardId) {
+            const reward = state.rewards.find(r => r.id === rewardId);
+            const kidId = state.selectedKid;
+            const kid = state.kids[kidId];
+
+            if (!reward || kid.points < reward.cost) return;
+
+            kid.points -= reward.cost;
+
+            state.history.unshift({
+                id: Date.now(),
+                kidName: kid.name,
+                type: 'redeem',
+                title: reward.name,
+                points: `-${reward.cost}`,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'numeric', day: 'numeric' })
+            });
+
+            triggerConfetti();
+            showToast(`🎁 ${kid.name} 成功兌換「${reward.name}」！`);
+            
+            saveData();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            if (state.history.length === 0) {
+                container.innerHTML = `<p class="text-xs text-center text-gray-400 py-4">暫無紀錄，快啲去完成任務啦！</p>`;
+                return;
+            }
+
+            container.innerHTML = state.history.map(item => `
+                <div class="flex items-center justify-between text-xs pb-2 border-b border-gray-50 last:border-0">
+                    <div class="flex items-center gap-2">
+                        <span class="${item.type === 'award' ? 'text-green-500 bg-green-50' : 'text-rose-500 bg-rose-50'} font-bold px-2 py-1 rounded-lg">
+                            ${item.points}
+                        </span>
+                        <div>
+                            <p class="font-bold text-gray-700">${item.kidName} - ${item.title}</p>
+                            <span class="text-[10px] text-gray-400">${item.time}</span>
                         </div>
                     </div>
                 </div>
-                <button onclick="redeemReward('${reward.id}')" ${!canAfford ? 'disabled' : ''} class="shrink-0 ${canAfford ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-md active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'} font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-1">
-                    <span>${canAfford ? '兌換' : '未夠分'}</span>
-                    <span>${canAfford ? '🎉' : '🔒'}</span>
-                </button>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    function renderHistory() {
-        const container = document.getElementById('history-list');
-        container.innerHTML = '';
-
-        const history = state.profiles[state.activeProfile].history;
-        if (!history || history.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-8 text-slate-400">
-                    <div class="text-3xl mb-1">📝</div>
-                    <p class="text-xs font-bold">還沒有任何星星紀錄，快去完成任務吧！</p>
-                </div>
-            `;
-            return;
+            `).join('');
         }
 
-        [...history].reverse().forEach(item => {
-            const isEarn = item.type === 'earn';
-            const el = document.createElement('div');
-            el.className = "flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs sm:text-sm";
-            el.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <span>${isEarn ? '✨' : '🎁'}</span>
-                    <span class="font-bold text-slate-700">${item.title}</span>
-                    <span class="text-[10px] text-slate-400">${item.date}</span>
-                </div>
-                <span class="font-black ${isEarn ? 'text-emerald-500' : 'text-rose-500'}">
-                    ${isEarn ? '+' : '-'}${item.points} ⭐
-                </span>
-            `;
-            container.appendChild(el);
-        });
-    }
+        function clearHistory() {
+            state.history = [];
+            saveData();
+        }
 
-    function renderAll() {
-        renderBanner();
-        renderTasks();
-        renderRewards();
-        renderHistory();
-    }
+        function switchTab(tabName) {
+            ['tasks', 'rewards', 'history', 'settings'].forEach(t => {
+                document.getElementById(`sec-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('text-pink-600', 'bg-pink-50');
+                document.getElementById(`tab-${t}`).classList.add('text-gray-500');
+            });
 
-    function addPoints(taskId) {
-        const task = state.tasks.find(t => t.id === taskId);
-        if (!task) return;
+            document.getElementById(`sec-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('text-pink-600', 'bg-pink-50');
+            document.getElementById(`tab-${tabName}`).classList.remove('text-gray-500');
+        }
 
-        const prof = state.profiles[state.activeProfile];
-        prof.points += task.points;
+        // Gist API Integration
+        async function saveAndSyncGist() {
+            const token = document.getElementById('gistTokenInput').value.trim();
+            let gistId = document.getElementById('gistIdInput').value.trim();
 
-        const now = new Date();
-        const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-        prof.history.push({
-            type: 'earn',
-            title: task.title,
-            points: task.points,
-            date: dateStr
-        });
-
-        playSound('point');
-        confetti({ particleCount: 35, spread: 70, origin: { y: 0.8 } });
-
-        renderAll();
-        syncToGitHub();
-    }
-
-    function redeemReward(rewardId) {
-        const reward = state.rewards.find(r => r.id === rewardId);
-        if (!reward) return;
-
-        const prof = state.profiles[state.activeProfile];
-        if (prof.points < reward.points) return;
-
-        prof.points -= reward.points;
-
-        const now = new Date();
-        const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-        prof.history.push({
-            type: 'spend',
-            title: reward.title,
-            points: reward.points,
-            date: dateStr
-        });
-
-        playSound('redeem');
-        confetti({ particleCount: 90, spread: 100, origin: { y: 0.6 } });
-
-        renderAll();
-        syncToGitHub();
-
-        showAlert('🎉 兌換成功！', `恭喜 ${prof.name} 順利兌換到【${reward.title}】！記得找爸爸媽媽履行約定喔！`, '🎁');
-    }
-
-    function playSound(type) {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            if (type === 'point') {
-                const notes = [523.25, 659.25, 783.99, 1046.50];
-                notes.forEach((freq, idx) => {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
-                    gain.gain.setValueAtTime(0.1, ctx.currentTime + idx * 0.08);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.3);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(ctx.currentTime + idx * 0.08);
-                    osc.stop(ctx.currentTime + idx * 0.08 + 0.3);
-                });
-            } else if (type === 'redeem') {
-                const notes = [440, 554.37, 659.25, 880];
-                notes.forEach((freq, idx) => {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
-                    gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.12);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.4);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(ctx.currentTime + idx * 0.12);
-                    osc.stop(ctx.currentTime + idx * 0.12 + 0.4);
-                });
+            if (!token) {
+                showToast("⚠️ 請先輸入 GitHub Personal Access Token");
+                return;
             }
-        } catch (e) {}
-    }
 
-    function switchSection(sec) {
-        document.getElementById('section-tasks').classList.add('hidden');
-        document.getElementById('section-rewards').classList.add('hidden');
-        document.getElementById('section-history').classList.add('hidden');
+            state.gistToken = token;
+            updateSyncBadge("Syncing...", "bg-yellow-400");
 
-        const btnTasks = document.getElementById('sec-tab-tasks');
-        const btnRewards = document.getElementById('sec-tab-rewards');
-        const btnHistory = document.getElementById('sec-tab-history');
+            const payload = {
+                description: "家庭寶貝獎勵計劃數據備份",
+                public: false,
+                files: {
+                    "kids_reward_data.json": {
+                        content: JSON.stringify(state, null, 2)
+                    }
+                }
+            };
 
-        btnTasks.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
-        btnRewards.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
-        btnHistory.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
-
-        if (sec === 'tasks') {
-            document.getElementById('section-tasks').classList.remove('hidden');
-            btnTasks.className = "pb-3 border-b-4 border-pink-500 text-pink-600 flex items-center gap-1.5 px-3 transition";
-        } else if (sec === 'rewards') {
-            document.getElementById('section-rewards').classList.remove('hidden');
-            btnRewards.className = "pb-3 border-b-4 border-purple-500 text-purple-600 flex items-center gap-1.5 px-3 transition";
-        } else if (sec === 'history') {
-            document.getElementById('section-history').classList.remove('hidden');
-            btnHistory.className = "pb-3 border-b-4 border-amber-500 text-amber-600 flex items-center gap-1.5 px-3 transition";
-        }
-    }
-
-    function filterTasks(cat) {
-        state.taskFilter = cat;
-        document.querySelectorAll('.task-filter-btn').forEach(btn => {
-            btn.className = btn.dataset.cat === cat ? 
-                "task-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" : 
-                "task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100";
-        });
-        renderTasks();
-    }
-
-    function filterRewards(cat) {
-        state.rewardFilter = cat;
-        document.querySelectorAll('.reward-filter-btn').forEach(btn => {
-            btn.className = btn.dataset.rcat === cat ? 
-                "reward-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" : 
-                "reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100";
-        });
-        renderRewards();
-    }
-
-    function openGithubModal() {
-        document.getElementById('github-token-input').value = state.github.token || '';
-        document.getElementById('github-gist-id-input').value = state.github.gistId || '';
-        document.getElementById('modal-backdrop').classList.remove('hidden');
-        document.getElementById('modal-github-sync').classList.remove('hidden');
-    }
-
-    function saveGithubSettings() {
-        state.github.token = document.getElementById('github-token-input').value.trim();
-        state.github.gistId = document.getElementById('github-gist-id-input').value.trim();
-
-        closeModal();
-        fetchFromGitHub();
-    }
-
-    function openAddTaskModal() {
-        document.getElementById('modal-backdrop').classList.remove('hidden');
-        document.getElementById('modal-add-task').classList.remove('hidden');
-    }
-
-    function openAddRewardModal() {
-        document.getElementById('modal-backdrop').classList.remove('hidden');
-        document.getElementById('modal-add-reward').classList.remove('hidden');
-    }
-
-    function openEditNameModal() {
-        document.getElementById('input-kid-name').value = state.profiles[state.activeProfile].name;
-        document.getElementById('modal-backdrop').classList.remove('hidden');
-        document.getElementById('modal-edit-name').classList.remove('hidden');
-    }
-
-    function closeModal() {
-        document.getElementById('modal-backdrop').classList.add('hidden');
-        document.getElementById('modal-add-task').classList.add('hidden');
-        document.getElementById('modal-add-reward').classList.add('hidden');
-        document.getElementById('modal-edit-name').classList.add('hidden');
-        document.getElementById('modal-alert').classList.add('hidden');
-        document.getElementById('modal-github-sync').classList.add('hidden');
-    }
-
-    function showAlert(title, msg, icon = '🎉') {
-        document.getElementById('alert-title').innerText = title;
-        document.getElementById('alert-msg').innerText = msg;
-        document.getElementById('alert-icon').innerText = icon;
-        document.getElementById('modal-backdrop').classList.remove('hidden');
-        document.getElementById('modal-alert').classList.remove('hidden');
-    }
-
-    function saveCustomTask() {
-        const title = document.getElementById('input-task-title').value.trim();
-        const emoji = document.getElementById('input-task-emoji').value.trim() || '⭐';
-        const points = parseInt(document.getElementById('input-task-points').value) || 1;
-        const cat = document.getElementById('input-task-cat').value;
-        const target = document.getElementById('input-task-target').value;
-
-        if (!title) return;
-
-        state.tasks.push({ id: 'custom_' + Date.now(), title, emoji, points, cat, target });
-
-        closeModal();
-        renderTasks();
-        syncToGitHub();
-
-        document.getElementById('input-task-title').value = '';
-        document.getElementById('input-task-emoji').value = '';
-    }
-
-    function saveCustomReward() {
-        const title = document.getElementById('input-reward-title').value.trim();
-        const emoji = document.getElementById('input-reward-emoji').value.trim() || '🎁';
-        const points = parseInt(document.getElementById('input-reward-points').value) || 10;
-        const cat = document.getElementById('input-reward-cat').value;
-
-        if (!title) return;
-
-        state.rewards.push({ id: 'custom_r_' + Date.now(), title, emoji, points, cat });
-
-        closeModal();
-        renderRewards();
-        syncToGitHub();
-
-        document.getElementById('input-reward-title').value = '';
-        document.getElementById('input-reward-emoji').value = '';
-    }
-
-    function saveNameChange() {
-        const newName = document.getElementById('input-kid-name').value.trim();
-        if (!newName) return;
-
-        state.profiles[state.activeProfile].name = newName;
-
-        closeModal();
-        renderBanner();
-        syncToGitHub();
-    }
-
-    function clearHistory() {
-        state.profiles[state.activeProfile].history = [];
-        renderHistory();
-        syncToGitHub();
-    }
-
-    // Initialize App & Auto Fetch
-    function initApp() {
-        loadFromLocalStorage();
-        renderAll();
-
-        if (state.github.token && state.github.gistId) {
-            fetchFromGitHub();
-        } else {
-            updateSyncBadge('local', '本機紀錄模式');
-        }
-
-        // Auto polling every 15 seconds to sync with wife's changes
-        setInterval(() => {
-            if (state.github.token && state.github.gistId) {
-                fetchFromGitHub();
+            try {
+                if (!gistId) {
+                    // Create New Gist
+                    const res = await fetch("https://api.github.com/gists", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `token ${token}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        gistId = data.id;
+                        state.gistId = gistId;
+                        document.getElementById('gistIdInput').value = gistId;
+                        showToast("✅ 已成功新建並同步 Gist！");
+                    } else {
+                        throw new Error(data.message || "Failed to create Gist");
+                    }
+                } else {
+                    // Update Existing Gist
+                    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                        method: "PATCH",
+                        headers: {
+                            "Authorization": `token ${token}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        showToast("✅ 雲端資料同步成功！");
+                    } else {
+                        throw new Error("Gist 更新失敗");
+                    }
+                }
+                saveData();
+                updateSyncBadge("雲端連線", "bg-green-500");
+            } catch(e) {
+                console.error(e);
+                showToast("❌ 同步失敗: " + e.message);
+                updateSyncBadge("同步失敗", "bg-red-500");
             }
-        }, 15000);
-    }
+        }
 
-    // Global functions export
-    window.switchProfile = switchProfile;
-    window.addPoints = addPoints;
-    window.redeemReward = redeemReward;
-    window.switchSection = switchSection;
-    window.filterTasks = filterTasks;
-    window.filterRewards = filterRewards;
-    window.openAddTaskModal = openAddTaskModal;
-    window.openAddRewardModal = openAddRewardModal;
-    window.openEditNameModal = openEditNameModal;
-    window.openGithubModal = openGithubModal;
-    window.saveGithubSettings = saveGithubSettings;
-    window.autoCreateGist = autoCreateGist;
-    window.manualSyncFromCloud = manualSyncFromCloud;
-    window.closeModal = closeModal;
-    window.saveCustomTask = saveCustomTask;
-    window.saveCustomReward = saveCustomReward;
-    window.saveNameChange = saveNameChange;
-    window.clearHistory = clearHistory;
+        async function pushGistData(silent = false) {
+            if (!state.gistToken || !state.gistId) return;
+            try {
+                await fetch(`https://api.github.com/gists/${state.gistId}`, {
+                    method: "PATCH",
+                    headers: {
+                        "Authorization": `token ${state.gistToken}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            "kids_reward_data.json": {
+                                content: JSON.stringify(state, null, 2)
+                            }
+                        }
+                    })
+                });
+                if (!silent) showToast("✅ 已同步至雲端");
+                updateSyncBadge("雲端連線", "bg-green-500");
+            } catch(e) {
+                console.error("Auto push failed", e);
+                updateSyncBadge("連線不穩定", "bg-yellow-500");
+            }
+        }
 
-    window.onload = function() {
-        initApp();
-    };
-</script>
+        async function pullGistData() {
+            const token = document.getElementById('gistTokenInput').value.trim() || state.gistToken;
+            const gistId = document.getElementById('gistIdInput').value.trim() || state.gistId;
+
+            if (!gistId) {
+                showToast("⚠️ 請先輸入 Gist ID");
+                return;
+            }
+
+            try {
+                const headers = token ? { "Authorization": `token ${token}` } : {};
+                const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers });
+                const data = await res.json();
+                
+                if (data.files && data.files["kids_reward_data.json"]) {
+                    const cloudState = JSON.parse(data.files["kids_reward_data.json"].content);
+                    state.kids = cloudState.kids || state.kids;
+                    state.tasks = cloudState.tasks || state.tasks;
+                    state.rewards = cloudState.rewards || state.rewards;
+                    state.history = cloudState.history || state.history;
+                    saveData();
+                    showToast("✅ 已成功從雲端拉取最新分數！");
+                    updateSyncBadge("雲端連線", "bg-green-500");
+                }
+            } catch(e) {
+                showToast("❌ 拉取資料失敗");
+                console.error(e);
+            }
+        }
+
+        function checkGistAutoSync() {
+            if (state.gistId) {
+                pullGistData();
+            }
+        }
+
+        function updateSyncBadge(text, colorClass) {
+            const dot = document.getElementById('syncDot');
+            const txt = document.getElementById('syncText');
+
+            if (state.gistId && state.gistToken) {
+                dot.className = `w-2.5 h-2.5 rounded-full ${colorClass || 'bg-green-500'}`;
+                txt.innerText = text || "雲端同步中";
+            } else {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-gray-400";
+                txt.innerText = "本機模式";
+            }
+        }
+
+        // Custom Tasks & Rewards Modal Handlers
+        function openAddTaskModal() { document.getElementById('addTaskModal').classList.remove('hidden'); }
+        function openAddRewardModal() { document.getElementById('addRewardModal').classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function saveNewTask() {
+            const name = document.getElementById('newTaskName').value.trim();
+            const target = document.getElementById('newTaskTarget').value;
+            const icon = document.getElementById('newTaskIcon').value.trim() || '⭐';
+            const points = parseInt(document.getElementById('newTaskPoints').value) || 1;
+
+            if (!name) return;
+
+            state.tasks.push({
+                id: 'custom_' + Date.now(),
+                name, target, icon, points, cat: '自訂任務'
+            });
+
+            closeModal('addTaskModal');
+            document.getElementById('newTaskName').value = '';
+            saveData();
+            showToast("✨ 成功新增任務！");
+        }
+
+        function saveNewReward() {
+            const name = document.getElementById('newRewardName').value.trim();
+            const icon = document.getElementById('newRewardIcon').value.trim() || '🎁';
+            const cost = parseInt(document.getElementById('newRewardCost').value) || 10;
+
+            if (!name) return;
+
+            state.rewards.push({
+                id: 'custom_r_' + Date.now(),
+                name, icon, cost, desc: '自訂獎勵'
+            });
+
+            closeModal('addRewardModal');
+            document.getElementById('newRewardName').value = '';
+            saveData();
+            showToast("🎁 成功新增獎勵！");
+        }
+
+        function resetData() {
+            state.tasks = DEFAULT_TASKS;
+            state.rewards = DEFAULT_REWARDS;
+            state.kids = {
+                k1: { name: '大女兒 (姐姐)', points: 0 },
+                k2: { name: '小女兒 (妹妹)', points: 0 }
+            };
+            state.history = [];
+            saveData();
+            showToast("🔄 已重置預設資料");
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `reward_data_backup.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function triggerConfetti() {
+            try {
+                confetti({
+                    particleCount: 50,
+                    spread: 60,
+                    origin: { y: 0.7 }
+                });
+            } catch(e) {}
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
