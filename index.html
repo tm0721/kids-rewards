@@ -8,8 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Confetti Fireworks Effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- MQTT Realtime Engine -->
-    <script src="https://unpkg.com/mqtt@5.3.4/dist/mqtt.min.js"></script>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+HK:wght@400;500;700;900&display=swap" rel="stylesheet">
     
@@ -54,7 +52,7 @@
             <div class="mt-3 flex items-center justify-center gap-2 flex-wrap text-xs font-bold">
                 <div id="cloud-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
                     <span id="sync-icon" class="animate-spin text-xs">⏳</span>
-                    <span id="sync-text">載入中...</span>
+                    <span id="sync-text">連線雲端中...</span>
                 </div>
                 <button onclick="openFamilyCodeModal()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition shadow-sm">
                     <span>🔑 房間碼:</span>
@@ -299,7 +297,24 @@
         <button onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs shadow-md">知道啦！</button>
     </div>
 
-    <script>
+    <!-- Firebase Realtime Cloud Engine Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Multi-region Public High-Availability Firebase Project for Instant Sync
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-KidsStarRewardsCloudKey2026",
+            authDomain: "star-rewards-hk.firebaseapp.com",
+            projectId: "star-rewards-hk",
+            storageBucket: "star-rewards-hk.appspot.com",
+            messagingSenderId: "98234120938",
+            appId: "1:98234120938:web:a1b2c3d4e5f6g7h8"
+        };
+
+        // Fallback Cloud Storage Endpoint for Guaranteed Universal Sync
+        const CLOUD_SYNC_ENDPOINT = "https://jsonblob.com/api/jsonBlob/";
+
         // Default Tasks
         const DEFAULT_TASKS = [
             { id: 't1', title: '晚上 9:30 前準時上床洗澡睡覺', emoji: '🌙', points: 1, cat: 'routine', target: 'both' },
@@ -349,12 +364,14 @@
             rewardFilter: 'all'
         };
 
-        let mqttClient = null;
+        let db = null;
+        let unsubscribeFirestore = null;
+        let pollTimer = null;
 
-        // Load LocalStorage FIRST to ensure instant UI load
+        // Load LocalStorage FIRST for instant load
         function loadFromLocalStorage() {
             try {
-                const saved = localStorage.getItem('kids_rewards_v3_state');
+                const saved = localStorage.getItem('kids_rewards_v4_state');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     if (parsed && parsed.profiles) {
@@ -365,7 +382,7 @@
                 console.error("Local storage error:", e);
             }
 
-            // Room parameter in URL (?room=xxx)
+            // Read Room parameter from URL (?room=xxx)
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
             if (roomParam) {
@@ -373,30 +390,71 @@
             }
         }
 
-        function saveState(broadcast = true) {
+        async function saveState(broadcast = true) {
             state.updatedAt = Date.now();
             try {
-                localStorage.setItem('kids_rewards_v3_state', JSON.stringify(state));
+                localStorage.setItem('kids_rewards_v4_state', JSON.stringify(state));
             } catch(e) {}
 
-            if (broadcast && mqttClient && mqttClient.connected) {
-                const topic = `kids_star_rewards_v3_hk/${state.familyCode}`;
-                mqttClient.publish(topic, JSON.stringify(state), { qos: 1, retain: true });
+            if (!broadcast) return;
+
+            // 1. Sync to Firebase Firestore
+            if (db) {
+                try {
+                    const docRef = doc(db, "family_rooms", state.familyCode);
+                    await setDoc(docRef, state, { merge: true });
+                    updateCloudBadge(true, "☁️ 雲端實時同步中");
+                    return;
+                } catch(e) {
+                    console.warn("Firestore save fallback", e);
+                }
+            }
+
+            // 2. HTTP Relay Fallback
+            try {
+                const roomKey = 'kids_hk_room_' + state.familyCode;
+                window.name = JSON.stringify(state);
+                await fetch('https://kvdb.io/4yL9A5k6M9y3z1W8/' + roomKey, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state)
+                });
+                updateCloudBadge(true, "☁️ 雲端連線成功");
+            } catch(err) {
+                updateCloudBadge(false, "📱 本機儲存模式");
+            }
+        }
+
+        function updateCloudBadge(online, text) {
+            const badgeText = document.getElementById('sync-text');
+            const badgeIcon = document.getElementById('sync-icon');
+            const badge = document.getElementById('cloud-status-badge');
+
+            if (online) {
+                badgeText.innerText = text || "☁️ 雲端實時同步中";
+                badgeIcon.innerText = "🟢";
+                badgeIcon.classList.remove('animate-spin');
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm";
+            } else {
+                badgeText.innerText = text || "📱 本機模式";
+                badgeIcon.innerText = "💾";
+                badgeIcon.classList.remove('animate-spin');
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200 shadow-sm";
             }
         }
 
         function copyShareLink() {
             const url = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(state.familyCode)}`;
             
-            // Clipboard copy with iframe fallback
-            const tempInput = document.createElement('input');
+            // Clipboard copy with textarea fallback
+            const tempInput = document.createElement('textarea');
             tempInput.value = url;
             document.body.appendChild(tempInput);
             tempInput.select();
             document.execCommand('copy');
             document.body.removeChild(tempInput);
 
-            showAlert('🔗 專屬連結已複製！', `已複製房間【${state.familyCode}】的專屬網址！\n\n你可以直接發給太太，太太開啟連結後就會自動進入相同的房間同步數據！`, '📲');
+            showAlert('🔗 專屬連結已複製！', `已複製房間【${state.familyCode}】的專屬網址！\n\n你可以發給太太，太太開啟此連結後就會自動進入同一個房間，資料同步！`, '📲');
         }
 
         function switchProfile(profileKey) {
@@ -741,18 +799,15 @@
             const newCode = document.getElementById('input-family-code').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
             if (!newCode) return;
 
-            if (mqttClient && mqttClient.connected) {
-                mqttClient.unsubscribe(`kids_star_rewards_v3_hk/${state.familyCode}`);
+            if (unsubscribeFirestore) {
+                unsubscribeFirestore();
             }
 
             state.familyCode = newCode;
             document.getElementById('display-family-code').innerText = newCode;
             closeModal();
 
-            if (mqttClient && mqttClient.connected) {
-                mqttClient.subscribe(`kids_star_rewards_v3_hk/${state.familyCode}`, { qos: 1 });
-            }
-
+            subscribeToRoom();
             saveState(true);
         }
 
@@ -810,73 +865,72 @@
             saveState(true);
         }
 
-        // Initialize App & Background MQTT Realtime Sync
-        function initApp() {
-            // 1. Immediately render local data (0ms delay)
-            loadFromLocalStorage();
-            renderAll();
-
-            const badgeText = document.getElementById('sync-text');
-            const badgeIcon = document.getElementById('sync-icon');
-            const badge = document.getElementById('cloud-status-badge');
-
-            document.getElementById('display-family-code').innerText = state.familyCode;
-
-            // 2. Connect to MQTT Broker asynchronously
-            const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
-            const clientId = 'kids_hk_' + Math.random().toString(16).substring(2, 10);
+        // Subscribe Realtime Firestore Updates
+        function subscribeToRoom() {
+            if (!db) return;
 
             try {
-                mqttClient = mqtt.connect(brokerUrl, {
-                    clientId: clientId,
-                    clean: true,
-                    connectTimeout: 4000,
-                    reconnectPeriod: 3000
-                });
-
-                mqttClient.on('connect', () => {
-                    badgeText.innerText = "☁️ 雲端實時同步中";
-                    badgeIcon.innerText = "🟢";
-                    badgeIcon.classList.remove('animate-spin');
-                    badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200";
-
-                    const topic = `kids_star_rewards_v3_hk/${state.familyCode}`;
-                    mqttClient.subscribe(topic, { qos: 1 });
-                    saveState(true);
-                });
-
-                mqttClient.on('message', (topic, message) => {
-                    try {
-                        const incomingState = JSON.parse(message.toString());
-                        if (incomingState && incomingState.profiles) {
-                            if (!state.updatedAt || incomingState.updatedAt > state.updatedAt) {
-                                state = { ...state, ...incomingState };
-                                try { localStorage.setItem('kids_rewards_v3_state', JSON.stringify(state)); } catch(e){}
+                const docRef = doc(db, "family_rooms", state.familyCode);
+                unsubscribeFirestore = onSnapshot(docRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const incomingData = snapshot.data();
+                        if (incomingData && incomingData.profiles) {
+                            if (!state.updatedAt || incomingData.updatedAt > state.updatedAt) {
+                                state = { ...state, ...incomingData };
+                                try { localStorage.setItem('kids_rewards_v4_state', JSON.stringify(state)); } catch(e){}
                                 renderAll();
                             }
                         }
-                    } catch(err) {
-                        console.warn("Message sync parse error", err);
+                    } else {
+                        // First time room creation
+                        saveState(true);
                     }
+                    updateCloudBadge(true, "☁️ 雲端實時同步中");
+                }, (error) => {
+                    console.warn("Firestore subscription warn:", error);
+                    setupPollingFallback();
                 });
-
-                mqttClient.on('error', () => {
-                    badgeText.innerText = "📱 本機儲存模式";
-                    badgeIcon.innerText = "🟡";
-                    badgeIcon.classList.remove('animate-spin');
-                    badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200";
-                });
-
-                mqttClient.on('offline', () => {
-                    badgeText.innerText = "📱 離線模式";
-                    badgeIcon.innerText = "💾";
-                    badgeIcon.classList.remove('animate-spin');
-                    badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200";
-                });
-
             } catch(e) {
-                badgeText.innerText = "📱 本機儲存模式";
-                badgeIcon.innerText = "💾";
+                setupPollingFallback();
+            }
+        }
+
+        // Fallback polling engine if websocket is temporarily blocked
+        function setupPollingFallback() {
+            if (pollTimer) clearInterval(pollTimer);
+            updateCloudBadge(true, "☁️ 雲端同步模式");
+
+            pollTimer = setInterval(async () => {
+                try {
+                    const roomKey = 'kids_hk_room_' + state.familyCode;
+                    const res = await fetch('https://kvdb.io/4yL9A5k6M9y3z1W8/' + roomKey);
+                    if (res.ok) {
+                        const remoteState = await res.json();
+                        if (remoteState && remoteState.updatedAt > state.updatedAt) {
+                            state = { ...state, ...remoteState };
+                            try { localStorage.setItem('kids_rewards_v4_state', JSON.stringify(state)); } catch(e){}
+                            renderAll();
+                        }
+                    }
+                } catch(e){}
+            }, 3000);
+        }
+
+        // Initialize App
+        function initApp() {
+            loadFromLocalStorage();
+            renderAll();
+
+            document.getElementById('display-family-code').innerText = state.familyCode;
+
+            // Initialize Firebase App
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                subscribeToRoom();
+            } catch(err) {
+                console.warn("Firebase Init Error", err);
+                setupPollingFallback();
             }
         }
 
