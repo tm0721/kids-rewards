@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>好孩子星級獎勵計劃 🌟 Star Rewards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+HK:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Zen Maru Gothic', 'Noto Sans HK', sans-serif;
+            background: linear-gradient(135deg, #fff5f5 0%, #f0f9ff 50%, #f5f3ff 100%);
+            min-height: 100vh;
+        }
+
+        .card-pop {
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .card-pop:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        .card-pop:active {
+            transform: translateY(2px) scale(0.98);
+        }
+
+        .bounce-gentle {
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-12 antialiased selection:bg-pink-200">
+
+    <div id="app" class="max-w-4xl mx-auto px-4 pt-6">
+        <!-- Top Header & Cloud Status Badge -->
+        <header class="text-center mb-6">
+            <div class="inline-flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-1.5 rounded-full shadow-sm border border-pink-100 mb-2">
+                <span class="text-xl">🌈</span>
+                <span class="text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">家庭專屬 · 好孩子養成記</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-black text-slate-800 tracking-wide flex items-center justify-center gap-2">
+                ⭐ 星級獎勵計劃 ⭐
+            </h1>
+            
+            <!-- Cloud Status Indicator & Family Code Pill -->
+            <div class="mt-2 flex items-center justify-center gap-2 flex-wrap text-[11px] font-bold">
+                <div id="cloud-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                    <span id="sync-icon" class="animate-spin text-xs">⏳</span>
+                    <span id="sync-text">連線中...</span>
+                </div>
+                <button onclick="openFamilyCodeModal()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition shadow-sm">
+                    <span>🔑 房間碼:</span>
+                    <span id="display-family-code" class="font-black">our-happy-family</span>
+                    <span class="text-[10px] text-purple-400">✏️</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Kid Profile Switcher Tabs (Version 1 with Grade Badges) -->
+        <div class="grid grid-cols-2 gap-3 mb-6 max-w-md mx-auto">
+            <!-- Elder Daughter Tab -->
+            <button onclick="switchProfile('elder')" id="tab-elder" class="flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-pink-400 shadow-md">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-100 flex items-center justify-center text-2xl border-2 border-pink-300 shrink-0">
+                    👧🏻
+                </div>
+                <div class="text-left">
+                    <div id="name-elder" class="font-black text-slate-800 text-base sm:text-lg">大女兒</div>
+                    <div class="text-[11px] font-bold text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full inline-block border border-pink-200">升小一</div>
+                </div>
+            </button>
+
+            <!-- Younger Daughter Tab -->
+            <button onclick="switchProfile('younger')" id="tab-younger" class="flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-100 flex items-center justify-center text-2xl border-2 border-purple-300 shrink-0">
+                    👧👶
+                </div>
+                <div class="text-left">
+                    <div id="name-younger" class="font-black text-slate-800 text-base sm:text-lg">細女兒</div>
+                    <div class="text-[11px] font-bold text-purple-500 bg-purple-50 px-2 py-0.5 rounded-full inline-block border border-purple-200">升K1</div>
+                </div>
+            </button>
+        </div>
+
+        <!-- Score & Status Banner Card -->
+        <div id="profile-banner" class="bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-8 shadow-xl relative overflow-hidden transition-all duration-300">
+            <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+            <div class="absolute -left-8 -top-8 w-32 h-32 bg-yellow-200/20 rounded-full blur-xl pointer-events-none"></div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10">
+                <div class="flex items-center gap-4">
+                    <div id="avatar-icon" class="w-20 h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-4xl shadow-inner border border-white/30 bounce-gentle">
+                        👧🏻
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="current-name" class="text-2xl sm:text-3xl font-black">大女兒</h2>
+                            <button onclick="openEditNameModal()" class="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-full transition">✏️ 改名</button>
+                        </div>
+                        <p id="current-tag" class="text-amber-100 font-medium text-sm mt-0.5">升小一 · 努力儲星中！</p>
+                    </div>
+                </div>
+
+                <!-- Point Counter -->
+                <div class="bg-white/20 backdrop-blur px-6 py-3 rounded-2xl border border-white/40 text-center min-w-[160px] shadow-lg">
+                    <div class="text-xs text-amber-100 font-bold uppercase tracking-wider">目前星星分數</div>
+                    <div class="flex items-center justify-center gap-2 mt-1">
+                        <span class="text-3xl text-yellow-300 drop-shadow">⭐</span>
+                        <span id="point-count" class="text-4xl font-black tracking-tight text-white drop-shadow-md">0</span>
+                        <span class="text-lg font-bold text-amber-100">分</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Navigation Tabs -->
+        <div class="flex justify-center border-b border-slate-200 mb-6 gap-2 sm:gap-6 text-sm font-bold">
+            <button onclick="switchSection('tasks')" id="sec-tab-tasks" class="pb-3 border-b-4 border-pink-500 text-pink-600 flex items-center gap-1.5 px-3 transition">
+                <span>📋</span> 每日任務庫
+            </button>
+            <button onclick="switchSection('rewards')" id="sec-tab-rewards" class="pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition">
+                <span>🎁</span> 夢想兌換站
+            </button>
+            <button onclick="switchSection('history')" id="sec-tab-history" class="pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition">
+                <span>📜</span> 星星紀錄簿
+            </button>
+        </div>
+
+        <!-- SECTION 1: TASKS -->
+        <div id="section-tasks" class="space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <span>🎯</span> 完成任務賺星星
+                    </h3>
+                    <p class="text-xs text-slate-500">點擊右側「完成」按鈕，即可自動獲取分數獎勵！</p>
+                </div>
+                <button onclick="openAddTaskModal()" class="bg-pink-500 hover:bg-pink-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition shadow-md hover:shadow-pink-200 flex items-center justify-center gap-2">
+                    <span>➕</span> 新增自訂任務
+                </button>
+            </div>
+
+            <!-- Task Category Filter Buttons -->
+            <div class="flex flex-wrap gap-2 text-xs font-bold">
+                <button onclick="filterTasks('all')" class="task-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" data-cat="all">全部任務</button>
+                <button onclick="filterTasks('routine')" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100" data-cat="routine">🌅 好習慣與作息</button>
+                <button onclick="filterTasks('housework')" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100" data-cat="housework">🧹 家務小幫手</button>
+                <button onclick="filterTasks('learning')" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100" data-cat="learning">📚 自主學習</button>
+                <button onclick="filterTasks('manners')" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100" data-cat="manners">💖 禮貌與自理</button>
+            </div>
+
+            <!-- Task Cards Grid -->
+            <div id="tasks-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- SECTION 2: REWARDS -->
+        <div id="section-rewards" class="space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <span>🛍️</span> 星星商店
+                    </h3>
+                    <p class="text-xs text-slate-500">累積足夠星星，即可向爸爸媽媽兌換心儀獎勵！</p>
+                </div>
+                <button onclick="openAddRewardModal()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition shadow-md hover:shadow-purple-200 flex items-center justify-center gap-2">
+                    <span>➕</span> 新增自訂獎勵
+                </button>
+            </div>
+
+            <!-- Reward Category Filter -->
+            <div class="flex flex-wrap gap-2 text-xs font-bold">
+                <button onclick="filterRewards('all')" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" data-rcat="all">全部獎勵</button>
+                <button onclick="filterRewards('treat')" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100" data-rcat="treat">🍣 美味餐點/美食</button>
+                <button onclick="filterRewards('outing')" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100" data-rcat="outing">🛝 放電與外遊</button>
+                <button onclick="filterRewards('activity')" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100" data-rcat="activity">🎨 健康特權與趣味</button>
+            </div>
+
+            <!-- Reward Cards Grid -->
+            <div id="rewards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- SECTION 3: HISTORY LOG -->
+        <div id="section-history" class="space-y-4 hidden">
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <span>📜</span> 得分與兌換紀錄
+                    </h3>
+                    <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-red-500 transition">清空紀錄</button>
+                </div>
+                <div id="history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Backdrop -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        
+        <!-- Modal 1: Add Custom Task -->
+        <div id="modal-add-task" class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl hidden">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span>✨</span> 新增任務
+            </h3>
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">任務名稱</label>
+                    <input type="text" id="input-task-title" placeholder="例如：主動擺好碗筷" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-400">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">選擇 Emoji 圖示</label>
+                    <input type="text" id="input-task-emoji" placeholder="例如：🥣 (也可留空)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-400">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">獎勵分數</label>
+                        <input type="number" id="input-task-points" value="1" min="1" max="10" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">任務類別</label>
+                        <select id="input-task-cat" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white">
+                            <option value="routine">🌅 好習慣</option>
+                            <option value="housework">🧹 家務幫手</option>
+                            <option value="learning">📚 自主學習</option>
+                            <option value="manners">💖 禮貌自理</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">對象</label>
+                    <select id="input-task-target" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white">
+                        <option value="both">👧🏻👧👶 兩位女兒通用</option>
+                        <option value="elder">👧🏻 大女兒專屬 (升小一)</option>
+                        <option value="younger">👧👶 細女兒專屬 (升K1)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 font-bold text-slate-600 hover:bg-slate-200">取消</button>
+                <button onclick="saveCustomTask()" class="flex-1 py-2.5 rounded-xl bg-pink-500 font-bold text-white hover:bg-pink-600 shadow-md">確認新增</button>
+            </div>
+        </div>
+
+        <!-- Modal 2: Add Custom Reward -->
+        <div id="modal-add-reward" class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl hidden">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span>🎁</span> 新增獎勵
+            </h3>
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">獎勵名稱</label>
+                    <input type="text" id="input-reward-title" placeholder="例如：去海洋公園玩一天" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">選擇 Emoji 圖示</label>
+                    <input type="text" id="input-reward-emoji" placeholder="例如：🐬" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">所需星星分數</label>
+                        <input type="number" id="input-reward-points" value="10" min="1" max="100" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">獎勵類別</label>
+                        <select id="input-reward-cat" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
+                            <option value="treat">🍣 美味餐點</option>
+                            <option value="outing">🛝 外遊放電</option>
+                            <option value="activity">🎨 健康特權</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 font-bold text-slate-600 hover:bg-slate-200">取消</button>
+                <button onclick="saveCustomReward()" class="flex-1 py-2.5 rounded-xl bg-purple-500 font-bold text-white hover:bg-purple-600 shadow-md">確認新增</button>
+            </div>
+        </div>
+
+        <!-- Modal 3: Change Name Modal -->
+        <div id="modal-edit-name" class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl hidden">
+            <h3 class="text-xl font-bold text-slate-800 mb-3 flex items-center gap-2">✏️ 修改女兒暱稱</h3>
+            <p class="text-xs text-slate-500 mb-4">輸入你給女兒的親切稱呼（例如：心心、柔柔）</p>
+            <input type="text" id="input-kid-name" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm font-bold mb-4">
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 font-bold text-slate-600">取消</button>
+                <button onclick="saveNameChange()" class="flex-1 py-2.5 rounded-xl bg-amber-500 font-bold text-white shadow-md">儲存</button>
+            </div>
+        </div>
+
+        <!-- Modal 4: Alert Notification Modal -->
+        <div id="modal-alert" class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl hidden text-center">
+            <div id="alert-icon" class="text-5xl mb-3">🎉</div>
+            <h3 id="alert-title" class="text-xl font-bold text-slate-800 mb-2">成功兌換！</h3>
+            <p id="alert-msg" class="text-sm text-slate-600 mb-6">恭喜你得到了這項獎勵！</p>
+            <button onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-slate-800 font-bold text-white shadow-md hover:bg-slate-700">我知道了！</button>
+        </div>
+
+        <!-- Modal 5: Family Sync Code Modal -->
+        <div id="modal-family-code" class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl hidden">
+            <h3 class="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">🔑 設定家庭專屬房間碼</h3>
+            <p class="text-xs text-slate-500 mb-4">你與太太的手機只要輸入**相同的房間碼**，兩部手機的分數和紀錄就會即時同步！</p>
+            <input type="text" id="input-family-code" placeholder="例如：chan-family-888" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400 text-sm font-bold mb-4">
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 font-bold text-slate-600">取消</button>
+                <button onclick="saveFamilyCode()" class="flex-1 py-2.5 rounded-xl bg-purple-600 font-bold text-white shadow-md hover:bg-purple-700">儲存並同步</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 1. Default Datasets
+        const DEFAULT_TASKS = [
+            { id: 't1', title: '晚上 9:30 前準時上床洗澡睡覺', emoji: '🌙', points: 1, cat: 'routine', target: 'both' },
+            { id: 't2', title: '早上 7:30 前自動自覺起床', emoji: '☀️', points: 1, cat: 'routine', target: 'both' },
+            { id: 't3', title: '玩完玩具後主動歸位整理乾淨', emoji: '🧸', points: 1, cat: 'routine', target: 'both' },
+            { id: 't4', title: '獨立收拾好自己的小書包與上學用品', emoji: '🎒', points: 1, cat: 'routine', target: 'elder' },
+            { id: 't5', title: '出門前自己穿好鞋子與外套', emoji: '👟', points: 1, cat: 'routine', target: 'younger' },
+            { id: 't6', title: '吃飯前幫忙擺放碗筷與紙巾', emoji: '🥣', points: 1, cat: 'housework', target: 'both' },
+            { id: 't7', title: '吃完飯後把自己的碗盤放到洗碗槽', emoji: '🍽️', points: 1, cat: 'housework', target: 'both' },
+            { id: 't8', title: '幫忙抹桌子或整理餐桌', emoji: '🧹', points: 1, cat: 'housework', target: 'both' },
+            { id: 't9', title: '幫忙摺自己的小衣服或襪子', emoji: '👕', points: 1, cat: 'housework', target: 'both' },
+            { id: 't10', title: '專心獨立完成學校功課 / 工作紙', emoji: '✏️', points: 2, cat: 'learning', target: 'elder' },
+            { id: 't11', title: '認真閱讀繪本或圖書 20 分鐘', emoji: '📖', points: 1, cat: 'learning', target: 'both' },
+            { id: 't12', title: '主動練習寫字或畫畫創作', emoji: '🎨', points: 1, cat: 'learning', target: 'both' },
+            { id: 't13', title: '吃飯前與回家後自覺用肥皂洗手', emoji: '🧼', points: 1, cat: 'manners', target: 'both' },
+            { id: 't14', title: '早晚自動自覺刷牙洗臉', emoji: '🪥', points: 1, cat: 'manners', target: 'both' },
+            { id: 't15', title: '對長輩與家人有禮貌、主動打招呼', emoji: '💖', points: 1, cat: 'manners', target: 'both' },
+            { id: 't16', title: '整天情緒穩定、遇到問題好好表達', emoji: '😊', points: 2, cat: 'manners', target: 'both' }
+        ];
+
+        const DEFAULT_REWARDS = [
+            { id: 'r1', title: '去食迴轉壽司 🍣', emoji: '🍣', points: 15, cat: 'treat' },
+            { id: 'r2', title: '享用美味雪糕 / 甜品一次 🍦', emoji: '🍦', points: 8, cat: 'treat' },
+            { id: 'r3', title: '自選週末晚餐菜式 🍕', emoji: '🍕', points: 10, cat: 'treat' },
+            { id: 'r4', title: '去室內遊樂場 / Playhouse 玩 🛝', emoji: '🛝', points: 20, cat: 'outing' },
+            { id: 'r5', title: '去公園踩單車 / 滑板車 🚲', emoji: '🚲', points: 10, cat: 'outing' },
+            { id: 'r6', title: '去海邊沙灘堆沙放電 🏖️', emoji: '🏖️', points: 15, cat: 'outing' },
+            { id: 'r7', title: '家庭電影之夜（選想睇嘅電影+爆谷）🍿', emoji: '🍿', points: 12, cat: 'activity' },
+            { id: 'r8', title: '爸媽專屬一對一陪玩 30 分鐘 🎲', emoji: '🎲', points: 10, cat: 'activity' },
+            { id: 'r9', title: 'DIY 親子烘焙 / 手工製作 🎨', emoji: '🎨', points: 12, cat: 'activity' },
+            { id: 'r10', title: '週末允許特權延遲 30 分鐘睡覺 ⏰', emoji: '⏰', points: 8, cat: 'activity' }
+        ];
+
+        let state = {
+            familyCode: 'our-happy-family',
+            activeProfile: 'elder',
+            profiles: {
+                elder: {
+                    name: '大女兒',
+                    tag: '努力儲星中！',
+                    subTag: '升小一',
+                    points: 0,
+                    avatar: '👧🏻',
+                    history: []
+                },
+                younger: {
+                    name: '細女兒',
+                    tag: '快樂成長中！',
+                    subTag: '升K1',
+                    points: 0,
+                    avatar: '👧👶',
+                    history: []
+                }
+            },
+            tasks: [...DEFAULT_TASKS],
+            rewards: [...DEFAULT_REWARDS],
+            taskFilter: 'all',
+            rewardFilter: 'all'
+        };
+
+        let db = null;
+        let cloudDocRef = null;
+        let unsubscribeCloud = null;
+        let isCloudActive = false;
+
+        // Built-in Default Firebase Public Config for GitHub Pages Hosting
+        const DEFAULT_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyD-KidsStarRewardsKeyPlaceholder123",
+            authDomain: "kids-star-rewards.firebaseapp.com",
+            projectId: "kids-star-rewards-app",
+            storageBucket: "kids-star-rewards-app.appspot.com",
+            messagingSenderId: "109876543210",
+            appId: "1:109876543210:web:a1b2c3d4e5f6g7h8i9j0"
+        };
+
+        function playSound(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (type === 'point') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.3);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + idx * 0.08);
+                        osc.stop(ctx.currentTime + idx * 0.08 + 0.3);
+                    });
+                } else if (type === 'redeem') {
+                    const notes = [440, 554.37, 659.25, 880];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+                        gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.12);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.4);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + idx * 0.12);
+                        osc.stop(ctx.currentTime + idx * 0.12 + 0.4);
+                    });
+                }
+            } catch (e) {
+                console.log('Audio contextual note unsupported');
+            }
+        }
+
+        function saveState() {
+            // Save locally
+            try {
+                localStorage.setItem('kids_rewards_v1_state', JSON.stringify(state));
+            } catch(e) {}
+
+            // Sync to cloud if active
+            if (isCloudActive && cloudDocRef) {
+                setDoc(cloudDocRef, state).catch(err => console.error("Cloud save failed:", err));
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('kids_rewards_v1_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.profiles) {
+                        state = parsed;
+                    }
+                }
+            } catch(e) {}
+        }
+
+        function switchProfile(profileKey) {
+            state.activeProfile = profileKey;
+            
+            const tabElder = document.getElementById('tab-elder');
+            const tabYounger = document.getElementById('tab-younger');
+
+            if (profileKey === 'elder') {
+                tabElder.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-pink-400 shadow-md";
+                tabYounger.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70";
+            } else {
+                tabElder.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70";
+                tabYounger.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-purple-400 shadow-md";
+            }
+
+            renderAll();
+            saveState();
+        }
+
+        function renderBanner() {
+            const p = state.profiles[state.activeProfile];
+            document.getElementById('current-name').innerText = p.name;
+            document.getElementById('current-tag').innerText = p.tag;
+            document.getElementById('point-count').innerText = p.points;
+            document.getElementById('avatar-icon').innerText = p.avatar;
+
+            document.getElementById('name-elder').innerText = state.profiles.elder.name;
+            document.getElementById('name-younger').innerText = state.profiles.younger.name;
+
+            const banner = document.getElementById('profile-banner');
+            if (state.activeProfile === 'elder') {
+                banner.className = "bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-8 shadow-xl relative overflow-hidden transition-all duration-300";
+            } else {
+                banner.className = "bg-gradient-to-r from-purple-500 via-indigo-400 to-pink-400 rounded-3xl p-6 text-white mb-8 shadow-xl relative overflow-hidden transition-all duration-300";
+            }
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('tasks-grid');
+            container.innerHTML = '';
+
+            const currentProf = state.activeProfile;
+            const filtered = state.tasks.filter(t => {
+                const matchCat = state.taskFilter === 'all' || t.cat === state.taskFilter;
+                const matchTarget = t.target === 'both' || t.target === currentProf;
+                return matchCat && matchTarget;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <div class="text-4xl mb-2">🎈</div>
+                        <p class="font-bold">暫時沒有此類別任務，點擊上方按鈕新增吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(task => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-3 card-pop";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-2xl border border-amber-100 shrink-0">
+                            ${task.emoji || '⭐'}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm sm:text-base leading-snug">${task.title}</h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                                    +${task.points} ⭐
+                                </span>
+                                ${task.target !== 'both' ? `<span class="text-[10px] text-pink-500 bg-pink-50 border border-pink-200 px-1.5 py-0.5 rounded font-bold">${task.target === 'elder' ? '升小一專屬' : '升K1專屬'}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="addPoints('${task.id}')" class="shrink-0 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1">
+                        <span>完成</span>
+                        <span>✨</span>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderRewards() {
+            const container = document.getElementById('rewards-grid');
+            container.innerHTML = '';
+
+            const currentPoints = state.profiles[state.activeProfile].points;
+            const filtered = state.rewards.filter(r => state.rewardFilter === 'all' || r.cat === state.rewardFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <div class="text-4xl mb-2">🎁</div>
+                        <p class="font-bold">暫時沒有此類別獎勵</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(reward => {
+                const canAfford = currentPoints >= reward.points;
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-2xl p-4 border transition-all flex items-center justify-between gap-3 ${canAfford ? 'border-purple-200 shadow-sm card-pop' : 'border-slate-100 opacity-60'}`;
+                
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 ${canAfford ? 'bg-purple-50 border-purple-100' : 'bg-slate-100 border-slate-200'} rounded-2xl flex items-center justify-center text-2xl border shrink-0">
+                            ${reward.emoji || '🎁'}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm sm:text-base leading-snug">${reward.title}</h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200/60">
+                                    需要 ${reward.points} ⭐
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="redeemReward('${reward.id}')" ${!canAfford ? 'disabled' : ''} class="shrink-0 ${canAfford ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-md active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'} font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-1">
+                        <span>${canAfford ? '兌換' : '未夠分'}</span>
+                        <span>${canAfford ? '🎉' : '🔒'}</span>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            container.innerHTML = '';
+
+            const history = state.profiles[state.activeProfile].history;
+            if (!history || history.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400">
+                        <div class="text-3xl mb-1">📝</div>
+                        <p class="text-xs font-bold">還沒有任何星星紀錄，快去完成任務吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            [...history].reverse().forEach(item => {
+                const isEarn = item.type === 'earn';
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs sm:text-sm";
+                el.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span>${isEarn ? '✨' : '🎁'}</span>
+                        <span class="font-bold text-slate-700">${item.title}</span>
+                        <span class="text-[10px] text-slate-400">${item.date}</span>
+                    </div>
+                    <span class="font-black ${isEarn ? 'text-emerald-500' : 'text-rose-500'}">
+                        ${isEarn ? '+' : '-'}${item.points} ⭐
+                    </span>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function renderAll() {
+            renderBanner();
+            renderTasks();
+            renderRewards();
+            renderHistory();
+        }
+
+        function addPoints(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const prof = state.profiles[state.activeProfile];
+            prof.points += task.points;
+
+            const now = new Date();
+            const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            prof.history.push({
+                type: 'earn',
+                title: task.title,
+                points: task.points,
+                date: dateStr
+            });
+
+            playSound('point');
+            confetti({ particleCount: 35, spread: 70, origin: { y: 0.8 } });
+
+            renderAll();
+            saveState();
+        }
+
+        function redeemReward(rewardId) {
+            const reward = state.rewards.find(r => r.id === rewardId);
+            if (!reward) return;
+
+            const prof = state.profiles[state.activeProfile];
+            if (prof.points < reward.points) return;
+
+            prof.points -= reward.points;
+
+            const now = new Date();
+            const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            prof.history.push({
+                type: 'spend',
+                title: reward.title,
+                points: reward.points,
+                date: dateStr
+            });
+
+            playSound('redeem');
+            confetti({ particleCount: 90, spread: 100, origin: { y: 0.6 } });
+
+            renderAll();
+            saveState();
+
+            showAlert('🎉 兌換成功！', `恭喜 ${prof.name} 順利兌換到【${reward.title}】！記得找爸爸媽媽履行約定喔！`, '🎁');
+        }
+
+        function switchSection(sec) {
+            document.getElementById('section-tasks').classList.add('hidden');
+            document.getElementById('section-rewards').classList.add('hidden');
+            document.getElementById('section-history').classList.add('hidden');
+
+            const btnTasks = document.getElementById('sec-tab-tasks');
+            const btnRewards = document.getElementById('sec-tab-rewards');
+            const btnHistory = document.getElementById('sec-tab-history');
+
+            btnTasks.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
+            btnRewards.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
+            btnHistory.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
+
+            if (sec === 'tasks') {
+                document.getElementById('section-tasks').classList.remove('hidden');
+                btnTasks.className = "pb-3 border-b-4 border-pink-500 text-pink-600 flex items-center gap-1.5 px-3 transition";
+            } else if (sec === 'rewards') {
+                document.getElementById('section-rewards').classList.remove('hidden');
+                btnRewards.className = "pb-3 border-b-4 border-purple-500 text-purple-600 flex items-center gap-1.5 px-3 transition";
+            } else if (sec === 'history') {
+                document.getElementById('section-history').classList.remove('hidden');
+                btnHistory.className = "pb-3 border-b-4 border-amber-500 text-amber-600 flex items-center gap-1.5 px-3 transition";
+            }
+        }
+
+        function filterTasks(cat) {
+            state.taskFilter = cat;
+            document.querySelectorAll('.task-filter-btn').forEach(btn => {
+                btn.className = btn.dataset.cat === cat ? 
+                    "task-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" : 
+                    "task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100";
+            });
+            renderTasks();
+        }
+
+        function filterRewards(cat) {
+            state.rewardFilter = cat;
+            document.querySelectorAll('.reward-filter-btn').forEach(btn => {
+                btn.className = btn.dataset.rcat === cat ? 
+                    "reward-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" : 
+                    "reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100";
+            });
+            renderRewards();
+        }
+
+        function openAddTaskModal() {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-add-task').classList.remove('hidden');
+        }
+
+        function openAddRewardModal() {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-add-reward').classList.remove('hidden');
+        }
+
+        function openEditNameModal() {
+            document.getElementById('input-kid-name').value = state.profiles[state.activeProfile].name;
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-edit-name').classList.remove('hidden');
+        }
+
+        function openFamilyCodeModal() {
+            document.getElementById('input-family-code').value = state.familyCode || 'our-happy-family';
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-family-code').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+            document.getElementById('modal-add-task').classList.add('hidden');
+            document.getElementById('modal-add-reward').classList.add('hidden');
+            document.getElementById('modal-edit-name').classList.add('hidden');
+            document.getElementById('modal-alert').classList.add('hidden');
+            document.getElementById('modal-family-code').classList.add('hidden');
+        }
+
+        function showAlert(title, msg, icon = '🎉') {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-msg').innerText = msg;
+            document.getElementById('alert-icon').innerText = icon;
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-alert').classList.remove('hidden');
+        }
+
+        function saveFamilyCode() {
+            const newCode = document.getElementById('input-family-code').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            if (!newCode) return;
+
+            state.familyCode = newCode;
+            document.getElementById('display-family-code').innerText = newCode;
+            closeModal();
+            saveState();
+
+            // Re-bind cloud document listener
+            if (db) {
+                subscribeToCloudDoc();
+            }
+        }
+
+        function saveCustomTask() {
+            const title = document.getElementById('input-task-title').value.trim();
+            const emoji = document.getElementById('input-task-emoji').value.trim() || '⭐';
+            const points = parseInt(document.getElementById('input-task-points').value) || 1;
+            const cat = document.getElementById('input-task-cat').value;
+            const target = document.getElementById('input-task-target').value;
+
+            if (!title) return;
+
+            state.tasks.push({ id: 'custom_' + Date.now(), title, emoji, points, cat, target });
+
+            closeModal();
+            renderTasks();
+            saveState();
+
+            document.getElementById('input-task-title').value = '';
+            document.getElementById('input-task-emoji').value = '';
+        }
+
+        function saveCustomReward() {
+            const title = document.getElementById('input-reward-title').value.trim();
+            const emoji = document.getElementById('input-reward-emoji').value.trim() || '🎁';
+            const points = parseInt(document.getElementById('input-reward-points').value) || 10;
+            const cat = document.getElementById('input-reward-cat').value;
+
+            if (!title) return;
+
+            state.rewards.push({ id: 'custom_r_' + Date.now(), title, emoji, points, cat });
+
+            closeModal();
+            renderRewards();
+            saveState();
+
+            document.getElementById('input-reward-title').value = '';
+            document.getElementById('input-reward-emoji').value = '';
+        }
+
+        function saveNameChange() {
+            const newName = document.getElementById('input-kid-name').value.trim();
+            if (!newName) return;
+
+            state.profiles[state.activeProfile].name = newName;
+
+            closeModal();
+            renderBanner();
+            saveState();
+        }
+
+        function clearHistory() {
+            state.profiles[state.activeProfile].history = [];
+            renderHistory();
+            saveState();
+        }
+
+        // Expose functions to global window object for onclick attributes
+        window.switchProfile = switchProfile;
+        window.addPoints = addPoints;
+        window.redeemReward = redeemReward;
+        window.switchSection = switchSection;
+        window.filterTasks = filterTasks;
+        window.filterRewards = filterRewards;
+        window.openAddTaskModal = openAddTaskModal;
+        window.openAddRewardModal = openAddRewardModal;
+        window.openEditNameModal = openEditNameModal;
+        window.openFamilyCodeModal = openFamilyCodeModal;
+        window.closeModal = closeModal;
+        window.saveCustomTask = saveCustomTask;
+        window.saveCustomReward = saveCustomReward;
+        window.saveNameChange = saveNameChange;
+        window.saveFamilyCode = saveFamilyCode;
+        window.clearHistory = clearHistory;
+
+        function subscribeToCloudDoc() {
+            if (!db) return;
+            if (unsubscribeCloud) unsubscribeCloud();
+
+            const familyCode = state.familyCode || 'our-happy-family';
+            document.getElementById('display-family-code').innerText = familyCode;
+
+            // Save to shared public family doc path
+            cloudDocRef = doc(db, 'artifacts', 'kids-star-rewards', 'public', 'data', 'families', familyCode);
+
+            unsubscribeCloud = onSnapshot(cloudDocRef, (snap) => {
+                if (snap.exists()) {
+                    const cloudState = snap.data();
+                    if (cloudState && cloudState.profiles) {
+                        state = { ...state, ...cloudState };
+                        renderAll();
+                        try { localStorage.setItem('kids_rewards_v1_state', JSON.stringify(state)); } catch(e){}
+                    }
+                } else {
+                    // First time initialization for this family room
+                    setDoc(cloudDocRef, state).catch(err => console.warn("Initial doc push warn:", err));
+                }
+            }, (err) => {
+                console.warn("Cloud snapshot sync error:", err);
+            });
+        }
+
+        async function initCloudSync() {
+            const badgeText = document.getElementById('sync-text');
+            const badgeIcon = document.getElementById('sync-icon');
+            const badge = document.getElementById('cloud-status-badge');
+
+            loadFromLocalStorage();
+            renderAll();
+
+            try {
+                let config = DEFAULT_FIREBASE_CONFIG;
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    try { config = JSON.parse(__firebase_config); } catch(e){}
+                }
+
+                const app = initializeApp(config);
+                const auth = getAuth(app);
+                
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                db = getFirestore(app);
+                isCloudActive = true;
+
+                subscribeToCloudDoc();
+
+                badgeText.innerText = "☁️ 雲端實時同步中";
+                badgeIcon.innerText = "🟢";
+                badgeIcon.classList.remove('animate-spin');
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200";
+
+            } catch (err) {
+                console.log("Operating in LocalStorage Mode:", err.message);
+                badgeText.innerText = "📱 本機儲存模式";
+                badgeIcon.innerText = "💾";
+                badgeIcon.classList.remove('animate-spin');
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200";
+            }
+        }
+
+        window.onload = function() {
+            initCloudSync();
+        };
+    </script>
+</body>
+</html>
