@@ -1,0 +1,626 @@
+<!-- ... existing code ... -->
+    <title>好孩子星級獎勵計劃 🌟 Star Rewards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://unpkg.com/mqtt@5.3.4/dist/mqtt.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+HK:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+<!-- ... existing code ... -->
+            <!-- Cloud Status Indicator & Family Code Pill -->
+            <div class="mt-2 flex items-center justify-center gap-2 flex-wrap text-[11px] font-bold">
+                <div id="cloud-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                    <span id="sync-icon" class="animate-spin text-xs">⏳</span>
+                    <span id="sync-text">連線中...</span>
+                </div>
+                <button onclick="openFamilyCodeModal()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition shadow-sm">
+                    <span>🔑 房間碼:</span>
+                    <span id="display-family-code" class="font-black">our-happy-family</span>
+                    <span class="text-[10px] text-purple-400">✏️</span>
+                </button>
+                <button onclick="copyShareLink()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-pink-50 text-pink-600 border border-pink-200 hover:bg-pink-100 transition shadow-sm">
+                    <span>🔗 複製專屬連結給太太</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Kid Profile Switcher Tabs (Version 1 with Grade Badges) -->
+<!-- ... existing code ... -->
+    <script>
+        const DEFAULT_TASKS = [
+            { id: 't1', title: '晚上 9:30 前準時上床洗澡睡覺', emoji: '🌙', points: 1, cat: 'routine', target: 'both' },
+            { id: 't2', title: '早上 7:30 前自動自覺起床', emoji: '☀️', points: 1, cat: 'routine', target: 'both' },
+            { id: 't3', title: '玩完玩具後主動歸位整理乾淨', emoji: '🧸', points: 1, cat: 'routine', target: 'both' },
+            { id: 't4', title: '獨立收拾好自己的小書包與上學用品', emoji: '🎒', points: 1, cat: 'routine', target: 'elder' },
+            { id: 't5', title: '出門前自己穿好鞋子與外套', emoji: '👟', points: 1, cat: 'routine', target: 'younger' },
+            { id: 't6', title: '吃飯前幫忙擺放碗筷與紙巾', emoji: '🥣', points: 1, cat: 'housework', target: 'both' },
+            { id: 't7', title: '吃完飯後把自己的碗盤放到洗碗槽', emoji: '🍽️', points: 1, cat: 'housework', target: 'both' },
+            { id: 't8', title: '幫忙抹桌子或整理餐桌', emoji: '🧹', points: 1, cat: 'housework', target: 'both' },
+            { id: 't9', title: '幫忙摺自己的小衣服或襪子', emoji: '👕', points: 1, cat: 'housework', target: 'both' },
+            { id: 't10', title: '專心獨立完成學校功課 / 工作紙', emoji: '✏️', points: 2, cat: 'learning', target: 'elder' },
+            { id: 't11', title: '認真閱讀繪本或圖書 20 分鐘', emoji: '📖', points: 1, cat: 'learning', target: 'both' },
+            { id: 't12', title: '主動練習寫字或畫畫創作', emoji: '🎨', points: 1, cat: 'learning', target: 'both' },
+            { id: 't13', title: '吃飯前與回家後自覺用肥皂洗手', emoji: '🧼', points: 1, cat: 'manners', target: 'both' },
+            { id: 't14', title: '早晚自動自覺刷牙洗臉', emoji: '🪥', points: 1, cat: 'manners', target: 'both' },
+            { id: 't15', title: '對長輩與家人有禮貌、主動打招呼', emoji: '💖', points: 1, cat: 'manners', target: 'both' },
+            { id: 't16', title: '整天情緒穩定、遇到問題好好表達', emoji: '😊', points: 2, cat: 'manners', target: 'both' }
+        ];
+
+        const DEFAULT_REWARDS = [
+            { id: 'r1', title: '去食迴轉壽司 🍣', emoji: '🍣', points: 15, cat: 'treat' },
+            { id: 'r2', title: '享用美味雪糕 / 甜品一次 🍦', emoji: '🍦', points: 8, cat: 'treat' },
+            { id: 'r3', title: '自選週末晚餐菜式 🍕', emoji: '🍕', points: 10, cat: 'treat' },
+            { id: 'r4', title: '去室內遊樂場 / Playhouse 玩 🛝', emoji: '🛝', points: 20, cat: 'outing' },
+            { id: 'r5', title: '去公園踩單車 / 滑板車 🚲', emoji: '🚲', points: 10, cat: 'outing' },
+            { id: 'r6', title: '去海邊沙灘堆沙放電 🏖️', emoji: '🏖️', points: 15, cat: 'outing' },
+            { id: 'r7', title: '家庭電影之夜（選想睇嘅電影+爆谷）🍿', emoji: '🍿', points: 12, cat: 'activity' },
+            { id: 'r8', title: '爸媽專屬一對一陪玩 30 分鐘 🎲', emoji: '🎲', points: 10, cat: 'activity' },
+            { id: 'r9', title: 'DIY 親子烘焙 / 手工製作 🎨', emoji: '🎨', points: 12, cat: 'activity' },
+            { id: 'r10', title: '週末允許特權延遲 30 分鐘睡覺 ⏰', emoji: '⏰', points: 8, cat: 'activity' }
+        ];
+
+        let state = {
+            familyCode: 'our-happy-family',
+            activeProfile: 'elder',
+            updatedAt: Date.now(),
+            profiles: {
+                elder: { name: '大女兒', tag: '努力儲星中！', subTag: '升小一', points: 0, avatar: '👧🏻', history: [] },
+                younger: { name: '細女兒', tag: '快樂成長中！', subTag: '升K1', points: 0, avatar: '👧👶', history: [] }
+            },
+            tasks: [...DEFAULT_TASKS],
+            rewards: [...DEFAULT_REWARDS],
+            taskFilter: 'all',
+            rewardFilter: 'all'
+        };
+
+        let mqttClient = null;
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('kids_rewards_v3_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.profiles) {
+                        state = { ...state, ...parsed };
+                    }
+                }
+            } catch(e) {
+                console.error("Local load error", e);
+            }
+
+            // Check URL for room parameter (?room=xxx)
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+            if (roomParam) {
+                state.familyCode = roomParam.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            }
+        }
+
+        function saveState(broadcast = true) {
+            state.updatedAt = Date.now();
+            try {
+                localStorage.setItem('kids_rewards_v3_state', JSON.stringify(state));
+            } catch(e) {}
+
+            if (broadcast && mqttClient && mqttClient.connected) {
+                const topic = `kids_star_rewards_v3/${state.familyCode}`;
+                mqttClient.publish(topic, JSON.stringify(state), { qos: 1, retain: true });
+            }
+        }
+
+        function copyShareLink() {
+            const url = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(state.familyCode)}`;
+            const tempInput = document.createElement('input');
+            tempInput.value = url;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showAlert('🔗 專屬連結已複製！', `已複製房間【${state.familyCode}】的專屬網址！\n\n你可以直接透過 WhatsApp 發給太太，太太一開啟連結就會自動進入相同的房間同步！`, '📲');
+        }
+
+        function switchProfile(profileKey) {
+            state.activeProfile = profileKey;
+            
+            const tabElder = document.getElementById('tab-elder');
+            const tabYounger = document.getElementById('tab-younger');
+
+            if (profileKey === 'elder') {
+                tabElder.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-pink-400 shadow-md";
+                tabYounger.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70";
+            } else {
+                tabElder.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70";
+                tabYounger.className = "flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-purple-400 shadow-md";
+            }
+
+            renderAll();
+            saveState(true);
+        }
+
+        function renderBanner() {
+            const p = state.profiles[state.activeProfile];
+            document.getElementById('current-name').innerText = p.name;
+            document.getElementById('current-tag').innerText = p.tag;
+            document.getElementById('point-count').innerText = p.points;
+            document.getElementById('avatar-icon').innerText = p.avatar;
+
+            document.getElementById('name-elder').innerText = state.profiles.elder.name;
+            document.getElementById('name-younger').innerText = state.profiles.younger.name;
+
+            const banner = document.getElementById('profile-banner');
+            if (state.activeProfile === 'elder') {
+                banner.className = "bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-8 shadow-xl relative overflow-hidden transition-all duration-300";
+            } else {
+                banner.className = "bg-gradient-to-r from-purple-500 via-indigo-400 to-pink-400 rounded-3xl p-6 text-white mb-8 shadow-xl relative overflow-hidden transition-all duration-300";
+            }
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('tasks-grid');
+            container.innerHTML = '';
+
+            const currentProf = state.activeProfile;
+            const filtered = state.tasks.filter(t => {
+                const matchCat = state.taskFilter === 'all' || t.cat === state.taskFilter;
+                const matchTarget = t.target === 'both' || t.target === currentProf;
+                return matchCat && matchTarget;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <div class="text-4xl mb-2">🎈</div>
+                        <p class="font-bold">暫時沒有此類別任務，點擊上方按鈕新增吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(task => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-3 card-pop";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-2xl border border-amber-100 shrink-0">
+                            ${task.emoji || '⭐'}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm sm:text-base leading-snug">${task.title}</h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                                    +${task.points} ⭐
+                                </span>
+                                ${task.target !== 'both' ? `<span class="text-[10px] text-pink-500 bg-pink-50 border border-pink-200 px-1.5 py-0.5 rounded font-bold">${task.target === 'elder' ? '升小一專屬' : '升K1專屬'}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="addPoints('${task.id}')" class="shrink-0 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1">
+                        <span>完成</span>
+                        <span>✨</span>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderRewards() {
+            const container = document.getElementById('rewards-grid');
+            container.innerHTML = '';
+
+            const currentPoints = state.profiles[state.activeProfile].points;
+            const filtered = state.rewards.filter(r => state.rewardFilter === 'all' || r.cat === state.rewardFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <div class="text-4xl mb-2">🎁</div>
+                        <p class="font-bold">暫時沒有此類別獎勵</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(reward => {
+                const canAfford = currentPoints >= reward.points;
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-2xl p-4 border transition-all flex items-center justify-between gap-3 ${canAfford ? 'border-purple-200 shadow-sm card-pop' : 'border-slate-100 opacity-60'}`;
+                
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 ${canAfford ? 'bg-purple-50 border-purple-100' : 'bg-slate-100 border-slate-200'} rounded-2xl flex items-center justify-center text-2xl border shrink-0">
+                            ${reward.emoji || '🎁'}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm sm:text-base leading-snug">${reward.title}</h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200/60">
+                                    需要 ${reward.points} ⭐
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="redeemReward('${reward.id}')" ${!canAfford ? 'disabled' : ''} class="shrink-0 ${canAfford ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-md active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'} font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-1">
+                        <span>${canAfford ? '兌換' : '未夠分'}</span>
+                        <span>${canAfford ? '🎉' : '🔒'}</span>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            container.innerHTML = '';
+
+            const history = state.profiles[state.activeProfile].history;
+            if (!history || history.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400">
+                        <div class="text-3xl mb-1">📝</div>
+                        <p class="text-xs font-bold">還沒有任何星星紀錄，快去完成任務吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            [...history].reverse().forEach(item => {
+                const isEarn = item.type === 'earn';
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs sm:text-sm";
+                el.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span>${isEarn ? '✨' : '🎁'}</span>
+                        <span class="font-bold text-slate-700">${item.title}</span>
+                        <span class="text-[10px] text-slate-400">${item.date}</span>
+                    </div>
+                    <span class="font-black ${isEarn ? 'text-emerald-500' : 'text-rose-500'}">
+                        ${isEarn ? '+' : '-'}${item.points} ⭐
+                    </span>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function renderAll() {
+            renderBanner();
+            renderTasks();
+            renderRewards();
+            renderHistory();
+        }
+
+        function addPoints(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const prof = state.profiles[state.activeProfile];
+            prof.points += task.points;
+
+            const now = new Date();
+            const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            prof.history.push({
+                type: 'earn',
+                title: task.title,
+                points: task.points,
+                date: dateStr
+            });
+
+            playSound('point');
+            confetti({ particleCount: 35, spread: 70, origin: { y: 0.8 } });
+
+            renderAll();
+            saveState(true);
+        }
+
+        function redeemReward(rewardId) {
+            const reward = state.rewards.find(r => r.id === rewardId);
+            if (!reward) return;
+
+            const prof = state.profiles[state.activeProfile];
+            if (prof.points < reward.points) return;
+
+            prof.points -= reward.points;
+
+            const now = new Date();
+            const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            prof.history.push({
+                type: 'spend',
+                title: reward.title,
+                points: reward.points,
+                date: dateStr
+            });
+
+            playSound('redeem');
+            confetti({ particleCount: 90, spread: 100, origin: { y: 0.6 } });
+
+            renderAll();
+            saveState(true);
+
+            showAlert('🎉 兌換成功！', `恭喜 ${prof.name} 順利兌換到【${reward.title}】！記得找爸爸媽媽履行約定喔！`, '🎁');
+        }
+
+        function playSound(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (type === 'point') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.3);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + idx * 0.08);
+                        osc.stop(ctx.currentTime + idx * 0.08 + 0.3);
+                    });
+                } else if (type === 'redeem') {
+                    const notes = [440, 554.37, 659.25, 880];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+                        gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.12);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.4);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + idx * 0.12);
+                        osc.stop(ctx.currentTime + idx * 0.12 + 0.4);
+                    });
+                }
+            } catch (e) {}
+        }
+
+        function switchSection(sec) {
+            document.getElementById('section-tasks').classList.add('hidden');
+            document.getElementById('section-rewards').classList.add('hidden');
+            document.getElementById('section-history').classList.add('hidden');
+
+            const btnTasks = document.getElementById('sec-tab-tasks');
+            const btnRewards = document.getElementById('sec-tab-rewards');
+            const btnHistory = document.getElementById('sec-tab-history');
+
+            btnTasks.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
+            btnRewards.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
+            btnHistory.className = "pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition";
+
+            if (sec === 'tasks') {
+                document.getElementById('section-tasks').classList.remove('hidden');
+                btnTasks.className = "pb-3 border-b-4 border-pink-500 text-pink-600 flex items-center gap-1.5 px-3 transition";
+            } else if (sec === 'rewards') {
+                document.getElementById('section-rewards').classList.remove('hidden');
+                btnRewards.className = "pb-3 border-b-4 border-purple-500 text-purple-600 flex items-center gap-1.5 px-3 transition";
+            } else if (sec === 'history') {
+                document.getElementById('section-history').classList.remove('hidden');
+                btnHistory.className = "pb-3 border-b-4 border-amber-500 text-amber-600 flex items-center gap-1.5 px-3 transition";
+            }
+        }
+
+        function filterTasks(cat) {
+            state.taskFilter = cat;
+            document.querySelectorAll('.task-filter-btn').forEach(btn => {
+                btn.className = btn.dataset.cat === cat ? 
+                    "task-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" : 
+                    "task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100";
+            });
+            renderTasks();
+        }
+
+        function filterRewards(cat) {
+            state.rewardFilter = cat;
+            document.querySelectorAll('.reward-filter-btn').forEach(btn => {
+                btn.className = btn.dataset.rcat === cat ? 
+                    "reward-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm" : 
+                    "reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100";
+            });
+            renderRewards();
+        }
+
+        function openAddTaskModal() {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-add-task').classList.remove('hidden');
+        }
+
+        function openAddRewardModal() {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-add-reward').classList.remove('hidden');
+        }
+
+        function openEditNameModal() {
+            document.getElementById('input-kid-name').value = state.profiles[state.activeProfile].name;
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-edit-name').classList.remove('hidden');
+        }
+
+        function openFamilyCodeModal() {
+            document.getElementById('input-family-code').value = state.familyCode || 'our-happy-family';
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-family-code').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+            document.getElementById('modal-add-task').classList.add('hidden');
+            document.getElementById('modal-add-reward').classList.add('hidden');
+            document.getElementById('modal-edit-name').classList.add('hidden');
+            document.getElementById('modal-alert').classList.add('hidden');
+            document.getElementById('modal-family-code').classList.add('hidden');
+        }
+
+        function showAlert(title, msg, icon = '🎉') {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-msg').innerText = msg;
+            document.getElementById('alert-icon').innerText = icon;
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-alert').classList.remove('hidden');
+        }
+
+        function saveFamilyCode() {
+            const newCode = document.getElementById('input-family-code').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            if (!newCode) return;
+
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.unsubscribe(`kids_star_rewards_v3/${state.familyCode}`);
+            }
+
+            state.familyCode = newCode;
+            document.getElementById('display-family-code').innerText = newCode;
+            closeModal();
+
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.subscribe(`kids_star_rewards_v3/${state.familyCode}`, { qos: 1 });
+            }
+
+            saveState(true);
+        }
+
+        function saveCustomTask() {
+            const title = document.getElementById('input-task-title').value.trim();
+            const emoji = document.getElementById('input-task-emoji').value.trim() || '⭐';
+            const points = parseInt(document.getElementById('input-task-points').value) || 1;
+            const cat = document.getElementById('input-task-cat').value;
+            const target = document.getElementById('input-task-target').value;
+
+            if (!title) return;
+
+            state.tasks.push({ id: 'custom_' + Date.now(), title, emoji, points, cat, target });
+
+            closeModal();
+            renderTasks();
+            saveState(true);
+
+            document.getElementById('input-task-title').value = '';
+            document.getElementById('input-task-emoji').value = '';
+        }
+
+        function saveCustomReward() {
+            const title = document.getElementById('input-reward-title').value.trim();
+            const emoji = document.getElementById('input-reward-emoji').value.trim() || '🎁';
+            const points = parseInt(document.getElementById('input-reward-points').value) || 10;
+            const cat = document.getElementById('input-reward-cat').value;
+
+            if (!title) return;
+
+            state.rewards.push({ id: 'custom_r_' + Date.now(), title, emoji, points, cat });
+
+            closeModal();
+            renderRewards();
+            saveState(true);
+
+            document.getElementById('input-reward-title').value = '';
+            document.getElementById('input-reward-emoji').value = '';
+        }
+
+        function saveNameChange() {
+            const newName = document.getElementById('input-kid-name').value.trim();
+            if (!newName) return;
+
+            state.profiles[state.activeProfile].name = newName;
+
+            closeModal();
+            renderBanner();
+            saveState(true);
+        }
+
+        function clearHistory() {
+            state.profiles[state.activeProfile].history = [];
+            renderHistory();
+            saveState(true);
+        }
+
+        function initMQTTCloudSync() {
+            loadFromLocalStorage();
+            renderAll();
+
+            const badgeText = document.getElementById('sync-text');
+            const badgeIcon = document.getElementById('sync-icon');
+            const badge = document.getElementById('cloud-status-badge');
+
+            document.getElementById('display-family-code').innerText = state.familyCode;
+
+            // Connect to public MQTT WebSocket broker
+            const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
+            const clientId = 'kids_client_' + Math.random().toString(16).substring(2, 10);
+
+            try {
+                mqttClient = mqtt.connect(brokerUrl, {
+                    clientId: clientId,
+                    clean: true,
+                    connectTimeout: 5000,
+                    reconnectPeriod: 3000
+                });
+
+                mqttClient.on('connect', () => {
+                    badgeText.innerText = "☁️ 雲端實時同步中";
+                    badgeIcon.innerText = "🟢";
+                    badgeIcon.classList.remove('animate-spin');
+                    badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200";
+
+                    const topic = `kids_star_rewards_v3/${state.familyCode}`;
+                    mqttClient.subscribe(topic, { qos: 1 });
+
+                    // Broadcast current state to update retain buffer
+                    saveState(true);
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const incomingState = JSON.parse(message.toString());
+                        if (incomingState && incomingState.profiles) {
+                            // Only update if incoming state is newer
+                            if (!state.updatedAt || incomingState.updatedAt > state.updatedAt) {
+                                state = { ...state, ...incomingState };
+                                try { localStorage.setItem('kids_rewards_v3_state', JSON.stringify(state)); } catch(e){}
+                                renderAll();
+                            }
+                        }
+                    } catch(err) {
+                        console.warn("Sync parse error", err);
+                    }
+                });
+
+                mqttClient.on('error', () => {
+                    badgeText.innerText = "📱 本機模式 (網絡異常)";
+                    badgeIcon.innerText = "🟡";
+                    badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200";
+                });
+
+                mqttClient.on('offline', () => {
+                    badgeText.innerText = "📱 本機模式 (離線)";
+                    badgeIcon.innerText = "💾";
+                    badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200";
+                });
+
+            } catch(e) {
+                badgeText.innerText = "📱 本機儲存模式";
+                badgeIcon.innerText = "💾";
+            }
+        }
+
+        // Global exports
+        window.switchProfile = switchProfile;
+        window.addPoints = addPoints;
+        window.redeemReward = redeemReward;
+        window.switchSection = switchSection;
+        window.filterTasks = filterTasks;
+        window.filterRewards = filterRewards;
+        window.openAddTaskModal = openAddTaskModal;
+        window.openAddRewardModal = openAddRewardModal;
+        window.openEditNameModal = openEditNameModal;
+        window.openFamilyCodeModal = openFamilyCodeModal;
+        window.closeModal = closeModal;
+        window.saveCustomTask = saveCustomTask;
+        window.saveCustomReward = saveCustomReward;
+        window.saveNameChange = saveNameChange;
+        window.saveFamilyCode = saveFamilyCode;
+        window.clearHistory = clearHistory;
+        window.copyShareLink = copyShareLink;
+
+        window.onload = function() {
+            initMQTTCloudSync();
+        };
+    </script>
+</body>
+</html>
