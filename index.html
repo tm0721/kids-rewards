@@ -1,32 +1,306 @@
-<!-- ... existing code ... -->
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>好孩子星級獎勵計劃 🌟 Star Rewards</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Confetti Fireworks Effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- MQTT Realtime Engine -->
     <script src="https://unpkg.com/mqtt@5.3.4/dist/mqtt.min.js"></script>
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+HK:wght@400;500;700;900&display=swap" rel="stylesheet">
     
     <style>
-<!-- ... existing code ... -->
-            <!-- Cloud Status Indicator & Family Code Pill -->
-            <div class="mt-2 flex items-center justify-center gap-2 flex-wrap text-[11px] font-bold">
+        body {
+            font-family: 'Zen Maru Gothic', 'Noto Sans HK', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 50%, #fdf2f8 100%);
+            min-height: 100vh;
+        }
+        .card-pop {
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .card-pop:active {
+            transform: scale(0.96);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.03);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-20">
+
+    <div class="max-w-md md:max-w-2xl mx-auto px-4 pt-6">
+        
+        <!-- Header Title & Sync Pill -->
+        <header class="text-center mb-6">
+            <h1 class="text-2xl sm:text-3xl font-black bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 bg-clip-text text-transparent flex items-center justify-center gap-2">
+                <span>🌟</span> 好孩子星級獎勵計劃 <span>✨</span>
+            </h1>
+            <p class="text-xs text-slate-500 mt-1 font-bold">建立良好習慣 ‧ 努力累積星星換大獎</p>
+
+            <!-- Cloud Status Indicator & Share Link -->
+            <div class="mt-3 flex items-center justify-center gap-2 flex-wrap text-xs font-bold">
                 <div id="cloud-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
                     <span id="sync-icon" class="animate-spin text-xs">⏳</span>
-                    <span id="sync-text">連線中...</span>
+                    <span id="sync-text">載入中...</span>
                 </div>
                 <button onclick="openFamilyCodeModal()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition shadow-sm">
                     <span>🔑 房間碼:</span>
                     <span id="display-family-code" class="font-black">our-happy-family</span>
                     <span class="text-[10px] text-purple-400">✏️</span>
                 </button>
-                <button onclick="copyShareLink()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-pink-50 text-pink-600 border border-pink-200 hover:bg-pink-100 transition shadow-sm">
+                <button onclick="copyShareLink()" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-pink-500 text-white hover:bg-pink-600 transition shadow-sm font-bold active:scale-95">
                     <span>🔗 複製專屬連結給太太</span>
                 </button>
             </div>
         </header>
 
-        <!-- Kid Profile Switcher Tabs (Version 1 with Grade Badges) -->
-<!-- ... existing code ... -->
+        <!-- Kid Profile Switcher Tabs -->
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <button id="tab-elder" onclick="switchProfile('elder')" class="flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white border-pink-400 shadow-md">
+                <span class="text-3xl">👧🏻</span>
+                <div class="text-left">
+                    <div id="name-elder" class="font-black text-slate-800 text-base sm:text-lg">大女兒</div>
+                    <span class="text-[10px] bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full font-bold">升小一</span>
+                </div>
+            </button>
+            
+            <button id="tab-younger" onclick="switchProfile('younger')" class="flex items-center justify-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all card-pop bg-white/60 border-transparent opacity-70">
+                <span class="text-3xl">👧👶</span>
+                <div class="text-left">
+                    <div id="name-younger" class="font-black text-slate-800 text-base sm:text-lg">細女兒</div>
+                    <span class="text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-bold">升K1</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Hero Star Score Card -->
+        <div id="profile-banner" class="bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-300">
+            <div class="absolute -right-4 -bottom-4 text-9xl opacity-10 pointer-events-none">⭐</div>
+            <div class="flex items-center justify-between relative z-10">
+                <div class="flex items-center gap-3">
+                    <span id="avatar-icon" class="text-4xl bg-white/20 p-2 rounded-2xl backdrop-blur-sm">👧🏻</span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="current-name" class="text-xl font-black">大女兒</h2>
+                            <button onclick="openEditNameModal()" class="text-xs bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-lg text-white font-bold transition">✏️ 改名</button>
+                        </div>
+                        <p id="current-tag" class="text-xs text-white/90 font-bold mt-0.5">努力儲星中！</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-white/80 font-bold uppercase tracking-wider">目前累積金星</div>
+                    <div class="text-4xl sm:text-5xl font-black drop-shadow-md flex items-center justify-end gap-1">
+                        <span id="point-count">0</span>
+                        <span class="text-amber-300 text-3xl sm:text-4xl">⭐</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Section Switcher -->
+        <div class="flex border-b-2 border-slate-200/80 mb-6 text-sm font-black">
+            <button id="sec-tab-tasks" onclick="switchSection('tasks')" class="pb-3 border-b-4 border-pink-500 text-pink-600 flex items-center gap-1.5 px-3 transition">
+                <span>📋</span>
+                <span>好行為任務</span>
+            </button>
+            <button id="sec-tab-rewards" onclick="switchSection('rewards')" class="pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition">
+                <span>🎁</span>
+                <span>獎勵換領</span>
+            </button>
+            <button id="sec-tab-history" onclick="switchSection('history')" class="pb-3 border-b-4 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5 px-3 transition">
+                <span>📜</span>
+                <span>星星紀錄</span>
+            </button>
+        </div>
+
+        <!-- TASKS SECTION -->
+        <div id="section-tasks" class="space-y-4">
+            <!-- Filter Pills & Add Button -->
+            <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1 text-xs font-bold">
+                <div class="flex items-center gap-1 shrink-0">
+                    <button onclick="filterTasks('all')" data-cat="all" class="task-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm">全部</button>
+                    <button onclick="filterTasks('routine')" data-cat="routine" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">☀️ 常規/自理</button>
+                    <button onclick="filterTasks('housework')" data-cat="housework" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🧹 家務小幫手</button>
+                    <button onclick="filterTasks('learning')" data-cat="learning" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">✏️ 學習閱讀</button>
+                    <button onclick="filterTasks('manners')" data-cat="manners" class="task-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">💖 禮貌情緒</button>
+                </div>
+                <button onclick="openAddTaskModal()" class="shrink-0 bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 shadow-sm transition active:scale-95">
+                    <span>➕</span>
+                    <span>新增任務</span>
+                </button>
+            </div>
+
+            <!-- Task Items Grid -->
+            <div id="tasks-grid" class="grid grid-cols-1 gap-3">
+                <!-- Dynamically Rendered -->
+            </div>
+        </div>
+
+        <!-- REWARDS SECTION -->
+        <div id="section-rewards" class="space-y-4 hidden">
+            <!-- Filter Pills & Add Button -->
+            <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1 text-xs font-bold">
+                <div class="flex items-center gap-1 shrink-0">
+                    <button onclick="filterRewards('all')" data-rcat="all" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-white shadow-sm">全部</button>
+                    <button onclick="filterRewards('treat')" data-rcat="treat" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🍣 美味美食</button>
+                    <button onclick="filterRewards('outing')" data-rcat="outing" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🛝 戶外放電</button>
+                    <button onclick="filterRewards('activity')" data-rcat="activity" class="reward-filter-btn px-3 py-1.5 rounded-xl bg-white text-slate-600 hover:bg-slate-100">🎨 家庭時光</button>
+                </div>
+                <button onclick="openAddRewardModal()" class="shrink-0 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 shadow-sm transition active:scale-95">
+                    <span>➕</span>
+                    <span>新增獎勵</span>
+                </button>
+            </div>
+
+            <!-- Rewards Items Grid -->
+            <div id="rewards-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Dynamically Rendered -->
+            </div>
+        </div>
+
+        <!-- HISTORY SECTION -->
+        <div id="section-history" class="space-y-4 hidden">
+            <div class="flex items-center justify-between">
+                <h3 class="font-black text-sm text-slate-700 flex items-center gap-1">
+                    <span>📜</span> 最近獎勵與兌換紀錄
+                </h3>
+                <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-rose-500 transition font-bold">清除紀錄</button>
+            </div>
+            <div id="history-list" class="space-y-2">
+                <!-- Dynamically Rendered -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODALS OVERLAY -->
+    <div id="modal-backdrop" onclick="closeModal()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden transition-opacity"></div>
+
+    <!-- Add Task Modal -->
+    <div id="modal-add-task" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
+        <h3 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+            <span>✨</span> 新增自訂任務
+        </h3>
+        <div class="space-y-3 text-xs font-bold">
+            <div>
+                <label class="block text-slate-600 mb-1">任務名稱</label>
+                <input type="text" id="input-task-title" placeholder="例如：主動幫忙倒垃圾" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-slate-600 mb-1">Emoji 圖案</label>
+                    <input type="text" id="input-task-emoji" placeholder="例如：🗑️" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400">
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">可得星星 ⭐</label>
+                    <input type="number" id="input-task-points" value="1" min="1" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-slate-600 mb-1">任務類別</label>
+                    <select id="input-task-cat" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400 bg-white">
+                        <option value="routine">☀️ 常規/自理</option>
+                        <option value="housework">🧹 家務小幫手</option>
+                        <option value="learning">✏️ 學習閱讀</option>
+                        <option value="manners">💖 禮貌情緒</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">適用對象</label>
+                    <select id="input-task-target" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-pink-400 bg-white">
+                        <option value="both">👧🏻👧👶 兩位囡囡皆適用</option>
+                        <option value="elder">👧🏻 大女兒專屬 (升小一)</option>
+                        <option value="younger">👧👶 細女兒專屬 (升K1)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2 mt-6 font-bold text-xs">
+            <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">取消</button>
+            <button onclick="saveCustomTask()" class="flex-1 py-2.5 rounded-xl bg-pink-500 text-white hover:bg-pink-600 transition shadow-md">儲存任務</button>
+        </div>
+    </div>
+
+    <!-- Add Reward Modal -->
+    <div id="modal-add-reward" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
+        <h3 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+            <span>🎁</span> 新增自訂獎勵
+        </h3>
+        <div class="space-y-3 text-xs font-bold">
+            <div>
+                <label class="block text-slate-600 mb-1">獎勵名稱</label>
+                <input type="text" id="input-reward-title" placeholder="例如：買一套心儀繪本" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-slate-600 mb-1">Emoji 圖案</label>
+                    <input type="text" id="input-reward-emoji" placeholder="例如：📚" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400">
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">需要星星 ⭐</label>
+                    <input type="number" id="input-reward-points" value="10" min="1" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400">
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-600 mb-1">獎勵類別</label>
+                <select id="input-reward-cat" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-400 bg-white">
+                    <option value="treat">🍣 美味美食</option>
+                    <option value="outing">🛝 戶外放電</option>
+                    <option value="activity">🎨 家庭時光</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex gap-2 mt-6 font-bold text-xs">
+            <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">取消</button>
+            <button onclick="saveCustomReward()" class="flex-1 py-2.5 rounded-xl bg-purple-500 text-white hover:bg-purple-600 transition shadow-md">儲存獎勵</button>
+        </div>
+    </div>
+
+    <!-- Edit Name Modal -->
+    <div id="modal-edit-name" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
+        <h3 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">✏️ 修改名稱</h3>
+        <input type="text" id="input-kid-name" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:outline-none focus:border-pink-400 mb-4">
+        <div class="flex gap-2 font-bold text-xs">
+            <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600">取消</button>
+            <button onclick="saveNameChange()" class="flex-1 py-2.5 rounded-xl bg-pink-500 text-white shadow-md">確定更新</button>
+        </div>
+    </div>
+
+    <!-- Family Room Code Modal -->
+    <div id="modal-family-code" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-3xl p-6 shadow-2xl z-50 hidden border border-slate-100">
+        <h3 class="text-base font-black text-slate-800 mb-2 flex items-center gap-2">🔑 設定家庭專屬房間碼</h3>
+        <p class="text-xs text-slate-500 mb-3 font-bold">兩部手機只需輸入相同的房間碼，數據就會實時跨手機同步！</p>
+        <input type="text" id="input-family-code" placeholder="例如：chan-family-888" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:outline-none focus:border-purple-400 mb-4">
+        <div class="flex gap-2 font-bold text-xs">
+            <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600">取消</button>
+            <button onclick="saveFamilyCode()" class="flex-1 py-2.5 rounded-xl bg-purple-500 text-white shadow-md">儲存並同步</button>
+        </div>
+    </div>
+
+    <!-- Custom Alert Dialog Modal -->
+    <div id="modal-alert" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-3xl p-6 shadow-2xl z-50 hidden text-center border border-slate-100">
+        <div id="alert-icon" class="text-5xl mb-2">🎉</div>
+        <h3 id="alert-title" class="text-lg font-black text-slate-800 mb-1">兌換成功！</h3>
+        <p id="alert-msg" class="text-xs font-bold text-slate-500 mb-5 leading-relaxed"></p>
+        <button onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs shadow-md">知道啦！</button>
+    </div>
+
     <script>
+        // Default Tasks
         const DEFAULT_TASKS = [
             { id: 't1', title: '晚上 9:30 前準時上床洗澡睡覺', emoji: '🌙', points: 1, cat: 'routine', target: 'both' },
             { id: 't2', title: '早上 7:30 前自動自覺起床', emoji: '☀️', points: 1, cat: 'routine', target: 'both' },
@@ -46,6 +320,7 @@
             { id: 't16', title: '整天情緒穩定、遇到問題好好表達', emoji: '😊', points: 2, cat: 'manners', target: 'both' }
         ];
 
+        // Default Rewards
         const DEFAULT_REWARDS = [
             { id: 'r1', title: '去食迴轉壽司 🍣', emoji: '🍣', points: 15, cat: 'treat' },
             { id: 'r2', title: '享用美味雪糕 / 甜品一次 🍦', emoji: '🍦', points: 8, cat: 'treat' },
@@ -59,6 +334,7 @@
             { id: 'r10', title: '週末允許特權延遲 30 分鐘睡覺 ⏰', emoji: '⏰', points: 8, cat: 'activity' }
         ];
 
+        // Global State
         let state = {
             familyCode: 'our-happy-family',
             activeProfile: 'elder',
@@ -75,6 +351,7 @@
 
         let mqttClient = null;
 
+        // Load LocalStorage FIRST to ensure instant UI load
         function loadFromLocalStorage() {
             try {
                 const saved = localStorage.getItem('kids_rewards_v3_state');
@@ -85,10 +362,10 @@
                     }
                 }
             } catch(e) {
-                console.error("Local load error", e);
+                console.error("Local storage error:", e);
             }
 
-            // Check URL for room parameter (?room=xxx)
+            // Room parameter in URL (?room=xxx)
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
             if (roomParam) {
@@ -103,20 +380,23 @@
             } catch(e) {}
 
             if (broadcast && mqttClient && mqttClient.connected) {
-                const topic = `kids_star_rewards_v3/${state.familyCode}`;
+                const topic = `kids_star_rewards_v3_hk/${state.familyCode}`;
                 mqttClient.publish(topic, JSON.stringify(state), { qos: 1, retain: true });
             }
         }
 
         function copyShareLink() {
             const url = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(state.familyCode)}`;
+            
+            // Clipboard copy with iframe fallback
             const tempInput = document.createElement('input');
             tempInput.value = url;
             document.body.appendChild(tempInput);
             tempInput.select();
             document.execCommand('copy');
             document.body.removeChild(tempInput);
-            showAlert('🔗 專屬連結已複製！', `已複製房間【${state.familyCode}】的專屬網址！\n\n你可以直接透過 WhatsApp 發給太太，太太一開啟連結就會自動進入相同的房間同步！`, '📲');
+
+            showAlert('🔗 專屬連結已複製！', `已複製房間【${state.familyCode}】的專屬網址！\n\n你可以直接發給太太，太太開啟連結後就會自動進入相同的房間同步數據！`, '📲');
         }
 
         function switchProfile(profileKey) {
@@ -149,9 +429,9 @@
 
             const banner = document.getElementById('profile-banner');
             if (state.activeProfile === 'elder') {
-                banner.className = "bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-8 shadow-xl relative overflow-hidden transition-all duration-300";
+                banner.className = "bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-300";
             } else {
-                banner.className = "bg-gradient-to-r from-purple-500 via-indigo-400 to-pink-400 rounded-3xl p-6 text-white mb-8 shadow-xl relative overflow-hidden transition-all duration-300";
+                banner.className = "bg-gradient-to-r from-purple-500 via-indigo-400 to-pink-400 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-300";
             }
         }
 
@@ -168,7 +448,7 @@
 
             if (filtered.length === 0) {
                 container.innerHTML = `
-                    <div class="col-span-full text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                    <div class="text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
                         <div class="text-4xl mb-2">🎈</div>
                         <p class="font-bold">暫時沒有此類別任務，點擊上方按鈕新增吧！</p>
                     </div>
@@ -462,7 +742,7 @@
             if (!newCode) return;
 
             if (mqttClient && mqttClient.connected) {
-                mqttClient.unsubscribe(`kids_star_rewards_v3/${state.familyCode}`);
+                mqttClient.unsubscribe(`kids_star_rewards_v3_hk/${state.familyCode}`);
             }
 
             state.familyCode = newCode;
@@ -470,7 +750,7 @@
             closeModal();
 
             if (mqttClient && mqttClient.connected) {
-                mqttClient.subscribe(`kids_star_rewards_v3/${state.familyCode}`, { qos: 1 });
+                mqttClient.subscribe(`kids_star_rewards_v3_hk/${state.familyCode}`, { qos: 1 });
             }
 
             saveState(true);
@@ -530,7 +810,9 @@
             saveState(true);
         }
 
-        function initMQTTCloudSync() {
+        // Initialize App & Background MQTT Realtime Sync
+        function initApp() {
+            // 1. Immediately render local data (0ms delay)
             loadFromLocalStorage();
             renderAll();
 
@@ -540,15 +822,15 @@
 
             document.getElementById('display-family-code').innerText = state.familyCode;
 
-            // Connect to public MQTT WebSocket broker
+            // 2. Connect to MQTT Broker asynchronously
             const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
-            const clientId = 'kids_client_' + Math.random().toString(16).substring(2, 10);
+            const clientId = 'kids_hk_' + Math.random().toString(16).substring(2, 10);
 
             try {
                 mqttClient = mqtt.connect(brokerUrl, {
                     clientId: clientId,
                     clean: true,
-                    connectTimeout: 5000,
+                    connectTimeout: 4000,
                     reconnectPeriod: 3000
                 });
 
@@ -558,10 +840,8 @@
                     badgeIcon.classList.remove('animate-spin');
                     badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200";
 
-                    const topic = `kids_star_rewards_v3/${state.familyCode}`;
+                    const topic = `kids_star_rewards_v3_hk/${state.familyCode}`;
                     mqttClient.subscribe(topic, { qos: 1 });
-
-                    // Broadcast current state to update retain buffer
                     saveState(true);
                 });
 
@@ -569,7 +849,6 @@
                     try {
                         const incomingState = JSON.parse(message.toString());
                         if (incomingState && incomingState.profiles) {
-                            // Only update if incoming state is newer
                             if (!state.updatedAt || incomingState.updatedAt > state.updatedAt) {
                                 state = { ...state, ...incomingState };
                                 try { localStorage.setItem('kids_rewards_v3_state', JSON.stringify(state)); } catch(e){}
@@ -577,19 +856,21 @@
                             }
                         }
                     } catch(err) {
-                        console.warn("Sync parse error", err);
+                        console.warn("Message sync parse error", err);
                     }
                 });
 
                 mqttClient.on('error', () => {
-                    badgeText.innerText = "📱 本機模式 (網絡異常)";
+                    badgeText.innerText = "📱 本機儲存模式";
                     badgeIcon.innerText = "🟡";
+                    badgeIcon.classList.remove('animate-spin');
                     badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200";
                 });
 
                 mqttClient.on('offline', () => {
-                    badgeText.innerText = "📱 本機模式 (離線)";
+                    badgeText.innerText = "📱 離線模式";
                     badgeIcon.innerText = "💾";
+                    badgeIcon.classList.remove('animate-spin');
                     badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200";
                 });
 
@@ -599,7 +880,7 @@
             }
         }
 
-        // Global exports
+        // Global function exports for inline HTML onClick
         window.switchProfile = switchProfile;
         window.addPoints = addPoints;
         window.redeemReward = redeemReward;
@@ -618,8 +899,9 @@
         window.clearHistory = clearHistory;
         window.copyShareLink = copyShareLink;
 
+        // Run App
         window.onload = function() {
-            initMQTTCloudSync();
+            initApp();
         };
     </script>
 </body>
